@@ -6,15 +6,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import { useGameStore } from '@/store/gameStore';
 import { SocketEvents, Quiz } from '@/shared/types';
+import { UserStorage } from '@/lib/userStorage';
 import { motion } from 'framer-motion';
 
 export default function CreateGamePage() {
   const router = useRouter();
   const socket = useSocket();
+  const searchParams = useSearchParams();
   const { game, isConnected } = useGameStore();
 
   const [quizzes, setQuizzes] = useState<Omit<Quiz, 'questions'>[]>([]);
@@ -25,7 +27,13 @@ export default function CreateGamePage() {
   // Fetch quizzes
   useEffect(() => {
     fetchQuizzes();
-  }, []);
+
+    // Pre-seleccionar quiz si viene de la URL
+    const quizIdParam = searchParams.get('quizId');
+    if (quizIdParam) {
+      setSelectedQuizId(quizIdParam);
+    }
+  }, [searchParams]);
 
   // Redirect cuando se crea el juego
   useEffect(() => {
@@ -36,13 +44,32 @@ export default function CreateGamePage() {
 
   const fetchQuizzes = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/public`
-      );
-      const data = await response.json();
-      if (data.success) {
-        setQuizzes(data.data);
+      const userId = UserStorage.getUserId();
+
+      // Fetch both public and user's quizzes
+      const [publicResponse, userResponse] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/public`),
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/creator/${userId}`)
+      ]);
+
+      const publicData = await publicResponse.json();
+      const userData = await userResponse.json();
+
+      const allQuizzes: Omit<Quiz, 'questions'>[] = [];
+
+      // Agregar quizzes del usuario primero
+      if (userData.success) {
+        allQuizzes.push(...userData.data);
       }
+
+      // Agregar quizzes públicos que no sean del usuario (evitar duplicados)
+      if (publicData.success) {
+        const userQuizIds = new Set(userData.data?.map((q: any) => q.id) || []);
+        const publicQuizzes = publicData.data.filter((q: any) => !userQuizIds.has(q.id));
+        allQuizzes.push(...publicQuizzes);
+      }
+
+      setQuizzes(allQuizzes);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
     } finally {

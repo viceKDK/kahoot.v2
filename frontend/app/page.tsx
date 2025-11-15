@@ -89,6 +89,38 @@ export default function HomePage() {
           </motion.div>
         </div>
 
+        {/* Quiz Management */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="grid md:grid-cols-2 gap-6"
+        >
+          {/* Crear Quiz */}
+          <div className="card p-6 space-y-3 text-center">
+            <div className="text-4xl">📝</div>
+            <h3 className="text-xl font-bold">Crear Quiz</h3>
+            <button
+              onClick={() => router.push('/quizzes/create')}
+              className="btn-secondary w-full"
+            >
+              Nuevo Quiz
+            </button>
+          </div>
+
+          {/* Mis Quizzes */}
+          <div className="card p-6 space-y-3 text-center">
+            <div className="text-4xl">📚</div>
+            <h3 className="text-xl font-bold">Mis Quizzes</h3>
+            <button
+              onClick={() => router.push('/quizzes/my-quizzes')}
+              className="btn-secondary w-full"
+            >
+              Ver Mis Quizzes
+            </button>
+          </div>
+        </motion.div>
+
         {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
