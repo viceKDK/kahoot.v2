@@ -1,0 +1,239 @@
+// ============================================================================
+// SHARED TYPES - QuizArena
+// Tipos compartidos entre Frontend y Backend (GRASP: Information Expert)
+// ============================================================================
+
+export enum GameStatus {
+  LOBBY = 'LOBBY',
+  PLAYING = 'PLAYING',
+  QUESTION = 'QUESTION',
+  RESULTS = 'RESULTS',
+  FINISHED = 'FINISHED'
+}
+
+export enum PlayerStatus {
+  WAITING = 'WAITING',
+  READY = 'READY',
+  PLAYING = 'PLAYING',
+  DISCONNECTED = 'DISCONNECTED'
+}
+
+export interface Avatar {
+  id: string;
+  emoji: string;
+  color: string;
+}
+
+export interface Player {
+  id: string;
+  name: string;
+  avatar: Avatar;
+  status: PlayerStatus;
+  score: number;
+  streak: number;
+  correctAnswers: number;
+  totalAnswers: number;
+  accuracy: number; // 0-100
+  isHost: boolean;
+  joinedAt: Date;
+}
+
+export interface QuestionOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  options: QuestionOption[];
+  timeLimit: number; // milliseconds
+  imageUrl?: string;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description?: string;
+  questions: Question[];
+  createdBy: string;
+  createdAt: Date;
+  isPublic: boolean;
+}
+
+export interface PlayerAnswer {
+  playerId: string;
+  questionId: string;
+  optionId: string;
+  answeredAt: number; // timestamp
+  timeElapsed: number; // milliseconds desde que inició la pregunta
+  isCorrect: boolean;
+  pointsEarned: number;
+}
+
+export interface QuestionResults {
+  questionId: string;
+  totalPlayers: number;
+  optionVotes: Record<string, number>; // optionId -> count
+  correctOptionId: string;
+  playerAnswers: PlayerAnswer[];
+}
+
+export interface Game {
+  id: string;
+  code: string; // 6-digit code
+  quizId: string;
+  quiz: Quiz;
+  hostId: string;
+  status: GameStatus;
+  players: Player[];
+  currentQuestionIndex: number;
+  questionStartTime?: number;
+  results: QuestionResults[];
+  createdAt: Date;
+  finishedAt?: Date;
+}
+
+export interface RankingEntry {
+  player: Player;
+  rank: number;
+  previousRank?: number;
+}
+
+// ============================================================================
+// SOCKET EVENTS (GRASP: Low Coupling)
+// ============================================================================
+
+export namespace SocketEvents {
+  // Host Events
+  export const HOST_CREATE_GAME = 'host:create_game';
+  export const HOST_START_GAME = 'host:start_game';
+  export const HOST_NEXT_QUESTION = 'host:next_question';
+  export const HOST_END_GAME = 'host:end_game';
+
+  // Player Events
+  export const PLAYER_JOIN_GAME = 'player:join_game';
+  export const PLAYER_LEAVE_GAME = 'player:leave_game';
+  export const PLAYER_SUBMIT_ANSWER = 'player:submit_answer';
+
+  // Game Events (Server -> Clients)
+  export const GAME_CREATED = 'game:created';
+  export const GAME_UPDATED = 'game:updated';
+  export const GAME_STARTED = 'game:started';
+  export const GAME_QUESTION_START = 'game:question_start';
+  export const GAME_QUESTION_END = 'game:question_end';
+  export const GAME_SHOW_RESULTS = 'game:show_results';
+  export const GAME_SHOW_RANKING = 'game:show_ranking';
+  export const GAME_FINISHED = 'game:finished';
+  export const PLAYER_JOINED = 'player:joined';
+  export const PLAYER_LEFT = 'player:left';
+  export const ERROR = 'error';
+}
+
+// ============================================================================
+// SOCKET PAYLOADS (GRASP: Pure Fabrication para DTOs)
+// ============================================================================
+
+export interface CreateGamePayload {
+  quizId: string;
+  hostName: string;
+}
+
+export interface CreateGameResponse {
+  game: Game;
+  qrCode: string; // Data URL del QR
+  joinUrl: string;
+}
+
+export interface JoinGamePayload {
+  code: string;
+  playerName: string;
+}
+
+export interface JoinGameResponse {
+  game: Game;
+  player: Player;
+}
+
+export interface SubmitAnswerPayload {
+  gameId: string;
+  playerId: string;
+  questionId: string;
+  optionId: string;
+  timeElapsed: number;
+}
+
+export interface QuestionStartPayload {
+  question: Question;
+  questionNumber: number;
+  totalQuestions: number;
+  startTime: number;
+}
+
+export interface QuestionEndPayload {
+  questionId: string;
+  correctOptionId: string;
+}
+
+export interface ShowResultsPayload {
+  questionResults: QuestionResults;
+  question: Question;
+}
+
+export interface ShowRankingPayload {
+  ranking: RankingEntry[];
+  topPlayers: RankingEntry[]; // Top 5
+}
+
+export interface GameFinishedPayload {
+  finalRanking: RankingEntry[];
+  podium: RankingEntry[]; // Top 3
+  questionHistory: {
+    question: Question;
+    results: QuestionResults;
+  }[];
+}
+
+export interface ErrorPayload {
+  message: string;
+  code?: string;
+}
+
+// ============================================================================
+// SCORING CONSTANTS (Single Responsibility)
+// ============================================================================
+
+export const SCORING = {
+  BASE_POINTS: 1000,
+  SPEED_MULTIPLIER: 0.5, // 50% del tiempo restante se suma como bonus
+  STREAK_BONUS: 200, // Puntos extra por cada pregunta en racha (después de 3 correctas)
+  STREAK_THRESHOLD: 3, // Número de respuestas correctas para activar racha
+} as const;
+
+// ============================================================================
+// AVATAR PRESETS (Open/Closed Principle - fácil de extender)
+// ============================================================================
+
+export const AVATAR_PRESETS: Avatar[] = [
+  { id: 'av1', emoji: '😀', color: '#FF6B6B' },
+  { id: 'av2', emoji: '😎', color: '#4ECDC4' },
+  { id: 'av3', emoji: '🤓', color: '#45B7D1' },
+  { id: 'av4', emoji: '😺', color: '#FFA07A' },
+  { id: 'av5', emoji: '🦊', color: '#FF8C42' },
+  { id: 'av6', emoji: '🐼', color: '#98D8C8' },
+  { id: 'av7', emoji: '🦁', color: '#F7DC6F' },
+  { id: 'av8', emoji: '🐸', color: '#7DCEA0' },
+  { id: 'av9', emoji: '🦄', color: '#BB8FCE' },
+  { id: 'av10', emoji: '🐙', color: '#85C1E2' },
+  { id: 'av11', emoji: '🚀', color: '#5DADE2' },
+  { id: 'av12', emoji: '⚡', color: '#F4D03F' },
+  { id: 'av13', emoji: '🔥', color: '#E74C3C' },
+  { id: 'av14', emoji: '⭐', color: '#F8B500' },
+  { id: 'av15', emoji: '💎', color: '#3498DB' },
+  { id: 'av16', emoji: '🎨', color: '#9B59B6' },
+  { id: 'av17', emoji: '🎮', color: '#E67E22' },
+  { id: 'av18', emoji: '🎸', color: '#E91E63' },
+  { id: 'av19', emoji: '🌈', color: '#16A085' },
+  { id: 'av20', emoji: '🍕', color: '#D35400' },
+];
