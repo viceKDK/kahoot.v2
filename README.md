@@ -25,6 +25,29 @@ Una aplicación de quizzes en tiempo real inspirada en Kahoot, construida con **
 - **Estadísticas Completas**: Precisión, historial de preguntas y distribución de votos
 - **Avatares Aleatorios**: Cada jugador recibe un emoji y color únicos
 
+### 📝 Gestión de Quizzes
+
+- **Crear Quizzes Personalizados**: Editor visual para crear tus propios quizzes
+  - Título y descripción
+  - Público/privado
+  - Agregar/editar/eliminar preguntas
+  - 4 opciones por pregunta (obligatorio)
+  - Marcar 1 respuesta correcta
+  - Tiempo límite personalizable (10-60 segundos)
+  - Soporte para imágenes (URL)
+- **Mis Quizzes**: Gestiona todos tus quizzes creados
+  - Ver lista de quizzes
+  - Editar quizzes existentes
+  - Eliminar quizzes
+  - Duplicar quizzes
+  - Crear sala directamente desde un quiz
+- **Editor Visual de Preguntas**:
+  - Texto de pregunta (máx 500 caracteres)
+  - 4 opciones con colores (rojo, azul, amarillo, verde)
+  - Selección visual de respuesta correcta
+  - Preview de imágenes en tiempo real
+  - Validaciones automáticas
+
 ### 🏗️ Arquitectura
 
 #### Backend
@@ -133,11 +156,35 @@ La aplicación estará disponible en `http://localhost:3000`
 
 ## 📖 Uso
 
+### Flujo de Creación de Quizzes
+
+1. **Acceder al Editor**:
+   - Desde la home, click en "Crear Quiz"
+   - O visita `/quizzes/create`
+
+2. **Crear el Quiz**:
+   - Ingresa título y descripción
+   - Marca si es público o privado
+   - Click en "Agregar Pregunta"
+
+3. **Agregar Preguntas**:
+   - Escribe el texto de la pregunta
+   - (Opcional) Agrega URL de imagen
+   - Ajusta el tiempo límite con el slider
+   - Ingresa las 4 opciones
+   - Marca la respuesta correcta
+   - Click en "Guardar"
+
+4. **Gestionar Quizzes**:
+   - Ve a "Mis Quizzes" desde la home
+   - Edita, duplica o elimina tus quizzes
+   - Crea una sala directamente desde un quiz
+
 ### Flujo del Juego
 
 1. **Crear Sala**:
    - El host accede a `/create`
-   - Selecciona un quiz
+   - Selecciona un quiz (público o propio)
    - Obtiene código de 6 dígitos y QR
 
 2. **Unirse**:
@@ -188,20 +235,27 @@ kahoot.v2/
 ├── frontend/
 │   ├── app/                 # Next.js 15 App Router
 │   │   ├── page.tsx         # Home
-│   │   ├── create/          # Crear sala
+│   │   ├── create/          # Crear sala de juego
 │   │   ├── join/[code]/     # Unirse a sala
 │   │   ├── host/[code]/     # Lobby del host
 │   │   ├── game/[code]/     # Juego en vivo
-│   │   └── final/[code]/    # Resultados finales
+│   │   ├── final/[code]/    # Resultados finales
+│   │   └── quizzes/         # Gestión de quizzes
+│   │       ├── create/      # Crear nuevo quiz
+│   │       ├── edit/[id]/   # Editar quiz
+│   │       └── my-quizzes/  # Mis quizzes
 │   ├── components/          # Componentes reutilizables
 │   │   ├── Avatar.tsx
 │   │   ├── Timer.tsx
 │   │   ├── OptionButton.tsx
 │   │   ├── PlayerCard.tsx
 │   │   ├── RankingList.tsx
-│   │   └── Podium.tsx
+│   │   ├── Podium.tsx
+│   │   └── QuestionEditor.tsx  # Editor de preguntas
 │   ├── hooks/               # Custom hooks
 │   │   └── useSocket.ts
+│   ├── lib/                 # Utilidades
+│   │   └── userStorage.ts   # Gestión de usuario local
 │   ├── store/               # Zustand store
 │   │   └── gameStore.ts
 │   ├── styles/              # Estilos globales
@@ -265,16 +319,27 @@ npm test
 | **Real-time** | WebSockets (Socket.IO) |
 | **Patrones** | SOLID, GRASP, Repository, Singleton |
 
-## 🎯 Roadmap Futuro
+## 🎯 Roadmap
+
+### ✅ Completado
+
+- [x] **Editor de quizzes en frontend** - Sistema completo de creación y gestión de quizzes
+- [x] **Soporte para imágenes** - URLs de imágenes en preguntas
+- [x] **Duplicar quizzes** - Funcionalidad de duplicar tus propios quizzes
+- [x] **Gestión completa de quizzes** - Crear, editar, eliminar, duplicar
+
+### 🔮 Futuro
 
 - [ ] Modo oscuro/claro
-- [ ] Editor de quizzes en frontend
 - [ ] Categorías y tags para quizzes
+- [ ] Búsqueda de quizzes públicos
 - [ ] Salas privadas con contraseña
 - [ ] Modo equipo (Team Battle)
 - [ ] Integración con Twitch/YouTube Chat
 - [ ] PWA para instalación en móvil
 - [ ] Soporte multiidioma
+- [ ] Upload de imágenes (actualmente solo URL)
+- [ ] Exportar/importar quizzes (JSON)
 
 ## 🤝 Contribuir
 

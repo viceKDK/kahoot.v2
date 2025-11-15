@@ -125,6 +125,20 @@ export default function GamePage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
           >
+            {/* Image (if exists) */}
+            {currentQuestion.imageUrl && (
+              <div className="flex justify-center mb-6">
+                <img
+                  src={currentQuestion.imageUrl}
+                  alt="Question"
+                  className="max-h-48 rounded-2xl shadow-2xl object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+
             <h1 className="text-4xl font-bold text-white text-center mb-8">
               {currentQuestion.text}
             </h1>
@@ -230,6 +244,24 @@ export default function GamePage() {
                 duration={currentQuestion.timeLimit}
               />
             </div>
+
+            {/* Image (if exists) */}
+            {currentQuestion.imageUrl && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex justify-center mb-8"
+              >
+                <img
+                  src={currentQuestion.imageUrl}
+                  alt="Question"
+                  className="max-h-64 rounded-2xl shadow-2xl object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </motion.div>
+            )}
 
             {/* Question */}
             <h1 className="text-4xl font-bold text-white text-center mb-12">
