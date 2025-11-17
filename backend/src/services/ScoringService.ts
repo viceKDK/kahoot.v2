@@ -14,7 +14,7 @@ export class ScoringService {
    * - Base: 1000 puntos
    * - Penalización lineal: Cada segundo resta puntos proporcionalmente
    * - Responder inmediatamente = 1000 pts
-   * - Responder al final = MIN_POINTS
+   * - Responder al final = 200 pts (mínimo garantizado)
    *
    * SISTEMA DE RACHAS:
    * - Multiplicador progresivo: +10% por cada racha

@@ -207,7 +207,7 @@ export interface ErrorPayload {
 export const SCORING = {
   // Sistema de velocidad: puntos base que disminuyen linealmente con el tiempo
   BASE_POINTS: 1000,
-  MIN_POINTS: 100, // Puntos mínimos garantizados por respuesta correcta
+  MIN_POINTS: 200, // Puntos mínimos garantizados por respuesta correcta
 
   // Sistema de rachas: multiplicador progresivo
   STREAK_MULTIPLIER: 0.10, // +10% por cada racha (racha 1 = x1.1, racha 2 = x1.2, etc.)
