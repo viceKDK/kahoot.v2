@@ -16,10 +16,20 @@ Una aplicación de quizzes en tiempo real inspirada en Kahoot, construida con **
 - **Lobby Pre-Juego**: Vista de jugadores conectados antes de iniciar
 - **Preguntas Cronometradas**: Timer circular visual con límite de tiempo
 - **4 Opciones Siempre**: Botones grandes y coloridos estilo Kahoot
-- **Sistema de Puntos**:
-  - **Base**: 1000 puntos por respuesta correcta
-  - **Velocidad**: Bonus por rapidez (50% del tiempo restante)
-  - **Rachas**: Puntos extra después de 3 respuestas correctas seguidas
+- **Sistema de Puntos Optimizado**:
+  - **Velocidad**: 1000 puntos base que disminuyen linealmente con el tiempo
+    - Respuesta inmediata: 1000 puntos
+    - Respuesta tardía: mínimo 200 puntos garantizados
+    - Penalización proporcional: cada segundo resta puntos según el tiempo límite
+  - **Rachas Progresivas**: Multiplicador que aumenta con cada respuesta correcta consecutiva
+    - Racha 1: ×1.1 (+10% puntos)
+    - Racha 2: ×1.2 (+20% puntos)
+    - Racha 3: ×1.3 (+30% puntos)
+    - Racha 10+: ×2.0 (máximo, el doble de puntos)
+  - **Ejemplos** (pregunta 20s):
+    - Responder en 5s sin racha: 800 pts
+    - Responder en 5s con racha 3: 1,040 pts
+    - Responder instantáneo con racha 10: 2,000 pts
 - **Rankings en Vivo**: Top 5 después de cada pregunta
 - **Podio Animado**: Top 3 con animaciones y efectos visuales
 - **Estadísticas Completas**: Precisión, historial de preguntas y distribución de votos
@@ -215,6 +225,69 @@ La aplicación estará disponible en `http://localhost:3000`
    - Ranking completo con precisión
    - Historial de preguntas
 
+## 🎯 Sistema de Puntuación Detallado
+
+QuizArena utiliza un sistema de puntuación optimizado que recompensa tanto la velocidad como la consistencia.
+
+### 🚀 Puntos por Velocidad
+
+El sistema asigna **1000 puntos base** que disminuyen linealmente con el tiempo transcurrido:
+
+```
+Puntos = 1000 - (segundos_transcurridos × penalización_por_segundo)
+Mínimo garantizado: 200 puntos
+```
+
+**Penalización por segundo** se calcula según el tiempo límite de cada pregunta:
+- `penalización_por_segundo = (1000 - 200) / tiempo_límite_en_segundos`
+
+#### Ejemplos por Tiempo de Pregunta:
+
+**Pregunta de 10 segundos** (80 pts/seg):
+- 0s → 1000 pts | 2s → 840 pts | 5s → 600 pts | 10s → 200 pts
+
+**Pregunta de 20 segundos** (40 pts/seg):
+- 0s → 1000 pts | 5s → 800 pts | 10s → 600 pts | 20s → 200 pts
+
+**Pregunta de 60 segundos** (13.33 pts/seg):
+- 0s → 1000 pts | 15s → 800 pts | 30s → 600 pts | 60s → 200 pts
+
+### 🔥 Sistema de Rachas
+
+Las rachas multiplican los puntos obtenidos, incentivando respuestas correctas consecutivas:
+
+```
+Multiplicador = 1 + (racha × 0.10)
+Máximo: ×2.0 (racha 10 o más)
+```
+
+| Racha | Multiplicador | Ejemplo (600 pts base) |
+|-------|---------------|------------------------|
+| 0 | ×1.0 | 600 pts |
+| 1 | ×1.1 | 660 pts (+10%) |
+| 2 | ×1.2 | 720 pts (+20%) |
+| 3 | ×1.3 | 780 pts (+30%) |
+| 5 | ×1.5 | 900 pts (+50%) |
+| 10+ | ×2.0 | 1,200 pts (+100%) |
+
+### 💎 Puntos Máximos Posibles
+
+| Escenario | Puntos |
+|-----------|--------|
+| Respuesta inmediata (0s), sin racha | 1,000 |
+| Respuesta inmediata (0s), racha 1 | 1,100 |
+| Respuesta inmediata (0s), racha 3 | 1,300 |
+| Respuesta inmediata (0s), racha 5 | 1,500 |
+| **Respuesta inmediata (0s), racha 10+** | **2,000** 🏆 |
+
+### ✨ Características del Sistema
+
+✅ **Justo y proporcional**: Responder a mitad del tiempo siempre da 600 pts (sin racha), independiente del tiempo límite
+✅ **Recompensa velocidad**: Cuanto más rápido respondas, más puntos obtienes
+✅ **Incentiva rachas**: Cada respuesta correcta consecutiva aumenta el multiplicador en 10%
+✅ **Sin penalización excesiva**: Mínimo 200 puntos garantizados por respuesta correcta
+✅ **Tope balanceado**: Máximo ×2.0 en rachas para mantener el juego competitivo
+
 ## 🗂️ Estructura del Proyecto
 
 ```
@@ -327,6 +400,7 @@ npm test
 - [x] **Soporte para imágenes** - URLs de imágenes en preguntas
 - [x] **Duplicar quizzes** - Funcionalidad de duplicar tus propios quizzes
 - [x] **Gestión completa de quizzes** - Crear, editar, eliminar, duplicar
+- [x] **Sistema de puntuación optimizado** - Velocidad con penalización lineal y rachas progresivas
 
 ### 🔮 Futuro
 
