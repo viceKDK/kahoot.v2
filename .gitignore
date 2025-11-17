@@ -49,3 +49,10 @@ yarn-error.log*
 
 # Misc
 .turbo
+
+# Documentation (auto-generated)
+ARCHITECTURE_OVERVIEW.txt
+CODEBASE_EXPLORATION.md
+DOCUMENTATION_INDEX.md
+EXPLORATION_SUMMARY.txt
+QUICK_REFERENCE.md
