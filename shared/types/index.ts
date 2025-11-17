@@ -205,10 +205,13 @@ export interface ErrorPayload {
 // ============================================================================
 
 export const SCORING = {
+  // Sistema de velocidad: puntos base que disminuyen linealmente con el tiempo
   BASE_POINTS: 1000,
-  SPEED_MULTIPLIER: 0.5, // 50% del tiempo restante se suma como bonus
-  STREAK_BONUS: 200, // Puntos extra por cada pregunta en racha (después de 3 correctas)
-  STREAK_THRESHOLD: 3, // Número de respuestas correctas para activar racha
+  MIN_POINTS: 200, // Puntos mínimos garantizados por respuesta correcta
+
+  // Sistema de rachas: multiplicador progresivo
+  STREAK_MULTIPLIER: 0.10, // +10% por cada racha (racha 1 = x1.1, racha 2 = x1.2, etc.)
+  MAX_STREAK_MULTIPLIER: 2.0, // Multiplicador máximo (racha 10 = x2.0)
 } as const;
 
 // ============================================================================
