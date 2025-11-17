@@ -107,9 +107,14 @@ export default function GamePage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-5xl font-bold text-white text-center mb-8">
-              🏆 Ranking
+              🏆 Rankings en Vivo
             </h1>
-            <RankingList ranking={ranking} showTop={5} showAccuracy />
+            <RankingList
+              ranking={ranking}
+              showTop={5}
+              showAccuracy
+              currentPlayerId={currentPlayer?.id}
+            />
           </motion.div>
         </div>
       </div>

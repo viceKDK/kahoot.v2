@@ -10,7 +10,7 @@ import { Question, QuestionOption } from '@/shared/types';
 import { motion } from 'framer-motion';
 
 interface QuestionEditorProps {
-  question?: Question;
+  question?: Omit<Question, 'id'>;
   onSave: (question: Omit<Question, 'id'>) => void;
   onCancel: () => void;
   questionNumber: number;
