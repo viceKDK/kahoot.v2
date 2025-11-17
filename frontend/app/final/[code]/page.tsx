@@ -14,7 +14,7 @@ import { motion } from 'framer-motion';
 
 export default function FinalPage() {
   const router = useRouter();
-  const { finalData, reset } = useGameStore();
+  const { finalData, currentPlayer, reset } = useGameStore();
 
   const [showHistory, setShowHistory] = useState(false);
 
@@ -64,7 +64,11 @@ export default function FinalPage() {
               <h2 className="text-4xl font-bold text-white text-center mb-6">
                 Ranking Completo
               </h2>
-              <RankingList ranking={finalData.finalRanking} showAccuracy />
+              <RankingList
+                ranking={finalData.finalRanking}
+                showAccuracy
+                currentPlayerId={currentPlayer?.id}
+              />
             </motion.div>
 
             {/* Buttons */}
