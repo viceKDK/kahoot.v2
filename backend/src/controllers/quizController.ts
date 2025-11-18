@@ -6,14 +6,22 @@
 import { Router, Request, Response } from 'express';
 import QuizRepository from '../models/QuizRepository';
 import { Quiz } from '../../../shared/types';
+import { quizCreationLimiter, listLimiter, authLimiter } from '../middleware/rateLimiter';
+import {
+  validateQuizCreation,
+  validateGetQuiz,
+  validateGetQuizzesByCreator,
+  validateDeleteQuiz,
+} from '../middleware/validators';
 
 const router = Router();
 
 /**
  * GET /api/quizzes/public
  * Obtiene todos los quizzes públicos
+ * Rate limited: 30 requests/minuto
  */
-router.get('/public', async (req: Request, res: Response) => {
+router.get('/public', listLimiter, async (_req: Request, res: Response) => {
   try {
     const quizzes = await QuizRepository.getPublicQuizzes();
     res.json({ success: true, data: quizzes });
@@ -24,27 +32,12 @@ router.get('/public', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/quizzes/:id
- * Obtiene un quiz por ID
- */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const quiz = await QuizRepository.getQuizById(req.params.id);
-    if (!quiz) {
-      return res.status(404).json({ success: false, error: 'Quiz not found' });
-    }
-    res.json({ success: true, data: quiz });
-  } catch (error: any) {
-    console.error('Error fetching quiz:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-/**
  * GET /api/quizzes/creator/:creatorId
  * Obtiene quizzes creados por un usuario
+ * Rate limited: 30 requests/minuto
+ * NOTA: Esta ruta debe estar ANTES de /:id para evitar conflictos
  */
-router.get('/creator/:creatorId', async (req: Request, res: Response) => {
+router.get('/creator/:creatorId', listLimiter, validateGetQuizzesByCreator, async (req: Request, res: Response) => {
   try {
     const quizzes = await QuizRepository.getQuizzesByCreator(req.params.creatorId);
     res.json({ success: true, data: quizzes });
@@ -55,40 +48,35 @@ router.get('/creator/:creatorId', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/quizzes/:id
+ * Obtiene un quiz por ID
+ * Validación: UUID válido
+ */
+router.get('/:id', validateGetQuiz, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const quiz = await QuizRepository.getQuizById(req.params.id);
+    if (!quiz) {
+      res.status(404).json({ success: false, error: 'Quiz not found' });
+      return;
+    }
+    res.json({ success: true, data: quiz });
+  } catch (error: any) {
+    console.error('Error fetching quiz:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/quizzes
  * Crea un nuevo quiz
+ * Rate limited: 10 quizzes/hora
+ * Validación completa de estructura
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', quizCreationLimiter, validateQuizCreation, async (req: Request, res: Response) => {
   try {
     const quizData = req.body as Omit<Quiz, 'id' | 'createdAt'>;
 
-    // Validaciones básicas
-    if (!quizData.title || !quizData.questions || quizData.questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Title and at least one question are required',
-      });
-    }
-
-    // Validar que cada pregunta tenga 4 opciones
-    for (const question of quizData.questions) {
-      if (!question.options || question.options.length !== 4) {
-        return res.status(400).json({
-          success: false,
-          error: 'Each question must have exactly 4 options',
-        });
-      }
-
-      // Validar que haya exactamente una respuesta correcta
-      const correctCount = question.options.filter((o) => o.isCorrect).length;
-      if (correctCount !== 1) {
-        return res.status(400).json({
-          success: false,
-          error: 'Each question must have exactly 1 correct option',
-        });
-      }
-    }
-
+    // Las validaciones ahora se hacen en el middleware validateQuizCreation
     const createdQuiz = await QuizRepository.createQuiz(quizData);
     res.status(201).json({ success: true, data: createdQuiz });
   } catch (error: any) {
@@ -100,12 +88,15 @@ router.post('/', async (req: Request, res: Response) => {
 /**
  * DELETE /api/quizzes/:id
  * Elimina un quiz
+ * Rate limited: 5 requests/5 minutos
+ * Validación: UUID válido
  */
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', authLimiter, validateDeleteQuiz, async (req: Request, res: Response): Promise<void> => {
   try {
     const deleted = await QuizRepository.deleteQuiz(req.params.id);
     if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Quiz not found' });
+      res.status(404).json({ success: false, error: 'Quiz not found' });
+      return;
     }
     res.json({ success: true, message: 'Quiz deleted successfully' });
   } catch (error: any) {
