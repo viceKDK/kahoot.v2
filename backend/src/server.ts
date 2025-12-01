@@ -21,7 +21,8 @@ const httpServer = createServer(app);
 // Socket.IO configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    // En desarrollo, permitimos cualquier origen (PC, móvil, etc.)
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -31,7 +32,8 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    // Igual que arriba: aceptar cualquier origen en dev
+    origin: true,
     credentials: true,
   })
 );
@@ -39,7 +41,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

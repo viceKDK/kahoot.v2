@@ -13,13 +13,13 @@ const router = Router();
  * GET /api/quizzes/public
  * Obtiene todos los quizzes públicos
  */
-router.get('/public', async (req: Request, res: Response) => {
+router.get('/public', async (_req: Request, res: Response) => {
   try {
     const quizzes = await QuizRepository.getPublicQuizzes();
-    res.json({ success: true, data: quizzes });
+    return res.json({ success: true, data: quizzes });
   } catch (error: any) {
     console.error('Error fetching public quizzes:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -33,10 +33,10 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!quiz) {
       return res.status(404).json({ success: false, error: 'Quiz not found' });
     }
-    res.json({ success: true, data: quiz });
+    return res.json({ success: true, data: quiz });
   } catch (error: any) {
     console.error('Error fetching quiz:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -90,10 +90,10 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const createdQuiz = await QuizRepository.createQuiz(quizData);
-    res.status(201).json({ success: true, data: createdQuiz });
+    return res.status(201).json({ success: true, data: createdQuiz });
   } catch (error: any) {
     console.error('Error creating quiz:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -107,10 +107,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Quiz not found' });
     }
-    res.json({ success: true, message: 'Quiz deleted successfully' });
+    return res.json({ success: true, message: 'Quiz deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting quiz:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 

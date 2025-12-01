@@ -11,6 +11,7 @@ import {
   QuestionResults,
   RankingEntry,
   GameStatus,
+  GameStatsPayload,
 } from '@/shared/types';
 
 interface GameState {
@@ -21,6 +22,7 @@ interface GameState {
   questionStartTime: number | null;
   questionResults: QuestionResults | null;
   ranking: RankingEntry[] | null;
+  gameStats: GameStatsPayload | null;
   finalData: {
     finalRanking: RankingEntry[];
     podium: RankingEntry[];
@@ -38,6 +40,7 @@ interface GameState {
   setCurrentQuestion: (question: Question, startTime: number) => void;
   setQuestionResults: (results: QuestionResults) => void;
   setRanking: (ranking: RankingEntry[]) => void;
+  setGameStats: (stats: GameStatsPayload) => void;
   setFinalData: (data: any) => void;
   setIsConnected: (connected: boolean) => void;
   setHasAnswered: (answered: boolean) => void;
@@ -54,6 +57,7 @@ const initialState = {
   questionStartTime: null,
   questionResults: null,
   ranking: null,
+  gameStats: null,
   finalData: null,
   isConnected: false,
   hasAnswered: false,
@@ -78,6 +82,8 @@ export const useGameStore = create<GameState>((set) => ({
   setQuestionResults: (results) => set({ questionResults: results }),
 
   setRanking: (ranking) => set({ ranking }),
+
+  setGameStats: (stats) => set({ gameStats: stats }),
 
   setFinalData: (data) => set({ finalData: data }),
 

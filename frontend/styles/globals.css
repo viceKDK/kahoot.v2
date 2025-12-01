@@ -27,23 +27,23 @@
 
   /* Option buttons (Kahoot-style) */
   .option-btn {
-    @apply w-full py-6 rounded-2xl font-bold text-2xl text-white shadow-xl transform transition-all duration-200 hover:scale-105 active:scale-95;
+    @apply w-full py-8 rounded-3xl font-black text-3xl text-white shadow-2xl transform transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-2xl;
   }
 
   .option-red {
-    @apply bg-option-red hover:bg-red-600;
+    @apply bg-gradient-to-br from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 shadow-red-500/50;
   }
 
   .option-blue {
-    @apply bg-option-blue hover:bg-blue-600;
+    @apply bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 shadow-blue-500/50;
   }
 
   .option-yellow {
-    @apply bg-option-yellow hover:bg-yellow-600 text-gray-900;
+    @apply bg-gradient-to-br from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-gray-900 shadow-yellow-400/50;
   }
 
   .option-green {
-    @apply bg-option-green hover:bg-green-600;
+    @apply bg-gradient-to-br from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 shadow-green-500/50;
   }
 
   /* Cards */
@@ -97,4 +97,35 @@
 
 .confetti {
   animation: confetti 3s ease-out forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }

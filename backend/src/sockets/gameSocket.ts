@@ -13,11 +13,13 @@ import {
   CreateGameResponse,
   JoinGameResponse,
   ErrorPayload,
+  GameMode,
 } from '../../../shared/types';
 import GameService from '../services/GameService';
 
 export class GameSocketHandler {
   private io: Server;
+  private questionTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(io: Server) {
     this.io = io;
@@ -34,7 +36,8 @@ export class GameSocketHandler {
         const { game, qrCode, joinUrl } = await GameService.createGame(
           payload.quizId,
           payload.hostName,
-          baseUrl
+          baseUrl,
+          payload.mode ?? GameMode.FAST
         );
 
         // El host se une a la room del juego
@@ -43,7 +46,7 @@ export class GameSocketHandler {
         const response: CreateGameResponse = { game, qrCode, joinUrl };
         socket.emit(SocketEvents.GAME_CREATED, response);
 
-        console.log(`✅ Game created: ${game.code} by ${payload.hostName}`);
+        console.log(`Game created: ${game.code} by ${payload.hostName}`);
       } catch (error: any) {
         const errorPayload: ErrorPayload = {
           message: error.message || 'Failed to create game',
@@ -64,10 +67,10 @@ export class GameSocketHandler {
         const response: JoinGameResponse = { game, player };
         socket.emit(SocketEvents.PLAYER_JOINED, response);
 
-        // Notificar a todos en la sala que un jugador se unió
-        this.io.to(game.code).emit(SocketEvents.GAME_UPDATED, game);
+        // Notificar a todos los clientes que el juego se actualizó
+        this.io.emit(SocketEvents.GAME_UPDATED, game);
 
-        console.log(`✅ ${player.name} joined game ${game.code}`);
+        console.log(`Player ${player.name} joined game ${game.code}`);
       } catch (error: any) {
         const errorPayload: ErrorPayload = {
           message: error.message || 'Failed to join game',
@@ -84,6 +87,17 @@ export class GameSocketHandler {
         try {
           const game = await GameService.startGame(payload.code, payload.hostId);
 
+          // Validar que el quiz tenga preguntas antes de iniciar
+          if (!game.quiz.questions || game.quiz.questions.length === 0) {
+            const errorPayload: ErrorPayload = {
+              message:
+                'El quiz seleccionado no tiene preguntas. Edita el quiz y añade al menos una pregunta antes de iniciar el juego.',
+            };
+            socket.emit(SocketEvents.ERROR, errorPayload);
+            console.error('Cannot start game without questions', game.code);
+            return;
+          }
+
           // Notificar a todos que el juego inició
           this.io.to(game.code).emit(SocketEvents.GAME_STARTED, game);
 
@@ -92,7 +106,7 @@ export class GameSocketHandler {
             this.startQuestion(game.code);
           }, 2000);
 
-          console.log(`✅ Game ${game.code} started`);
+          console.log(`Game ${game.code} started`);
         } catch (error: any) {
           const errorPayload: ErrorPayload = {
             message: error.message || 'Failed to start game',
@@ -106,7 +120,7 @@ export class GameSocketHandler {
     // Jugador envía respuesta
     socket.on(SocketEvents.PLAYER_SUBMIT_ANSWER, (payload: SubmitAnswerPayload) => {
       try {
-        const answer = GameService.submitAnswer(
+        const { answer, allAnswered } = GameService.submitAnswer(
           payload.gameId,
           payload.playerId,
           payload.optionId,
@@ -116,8 +130,41 @@ export class GameSocketHandler {
         // Confirmar al jugador que su respuesta fue recibida
         socket.emit('answer:submitted', { answer });
 
+        // Enviar estadísticas actualizadas al host
+        this.sendStatsToHost(payload.gameId);
+
+        const game = GameService.getGame(payload.gameId);
+
+        // Lógica de modos:
+        // FAST     -> en cuanto entra la PRIMERA respuesta, se termina la pregunta para todos
+        // WAIT_ALL -> se termina cuando todos los jugadores han respondido (allAnswered)
+        if (game) {
+          if (game.mode === GameMode.FAST) {
+            const currentResults =
+              game.results[game.currentQuestionIndex];
+            const answersCount = currentResults?.playerAnswers.length ?? 0;
+
+            // Si esta es la primera respuesta de la pregunta, cerramos ya
+            if (answersCount === 1) {
+              const timeout = this.questionTimeouts.get(payload.gameId);
+              if (timeout) {
+                clearTimeout(timeout);
+                this.questionTimeouts.delete(payload.gameId);
+              }
+              this.endQuestion(payload.gameId);
+            }
+          } else if (game.mode === GameMode.WAIT_ALL && allAnswered) {
+            const timeout = this.questionTimeouts.get(payload.gameId);
+            if (timeout) {
+              clearTimeout(timeout);
+              this.questionTimeouts.delete(payload.gameId);
+            }
+            this.endQuestion(payload.gameId);
+          }
+        }
+
         console.log(
-          `✅ Answer submitted by player ${payload.playerId} in game ${payload.gameId}`
+          `Answer submitted by player ${payload.playerId} in game ${payload.gameId}`
         );
       } catch (error: any) {
         const errorPayload: ErrorPayload = {
@@ -162,7 +209,7 @@ export class GameSocketHandler {
 
     // Jugador se desconecta
     socket.on('disconnect', () => {
-      console.log(`🔌 Socket disconnected: ${socket.id}`);
+      console.log(`Socket disconnected: ${socket.id}`);
       // Aquí podrías manejar la desconexión del jugador si guardas el mapping socket.id -> playerId
     });
   }
@@ -176,6 +223,16 @@ export class GameSocketHandler {
       const game = GameService.nextQuestion(code);
       const currentQuestion = game.quiz.questions[game.currentQuestionIndex];
 
+      if (!currentQuestion) {
+        console.error(
+          'No current question found for game',
+          code,
+          'index',
+          game.currentQuestionIndex
+        );
+        return;
+      }
+
       // Enviar pregunta a todos los jugadores
       this.io.to(code).emit(SocketEvents.GAME_QUESTION_START, {
         question: currentQuestion,
@@ -184,12 +241,24 @@ export class GameSocketHandler {
         startTime: game.questionStartTime!,
       });
 
+      // Enviar estadísticas iniciales al host
+      this.sendStatsToHost(code);
+
+      // Limpiar timeout anterior si existía
+      const existingTimeout = this.questionTimeouts.get(code);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+
       // Terminar pregunta automáticamente después del tiempo límite + 2 segundos de buffer
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         this.endQuestion(code);
+        this.questionTimeouts.delete(code);
       }, currentQuestion.timeLimit + 2000);
 
-      console.log(`✅ Question ${game.currentQuestionIndex + 1} started in game ${code}`);
+      this.questionTimeouts.set(code, timeout);
+
+      console.log(`Question ${game.currentQuestionIndex + 1} started in game ${code}`);
     } catch (error) {
       console.error('Error starting question:', error);
     }
@@ -207,11 +276,24 @@ export class GameSocketHandler {
       const results = GameService.endQuestion(code);
       const currentQuestion = game.quiz.questions[game.currentQuestionIndex];
 
+      if (!currentQuestion) {
+        console.error(
+          'No current question found on endQuestion for game',
+          code,
+          'index',
+          game.currentQuestionIndex
+        );
+        return;
+      }
+
       // Enviar fin de pregunta
       this.io.to(code).emit(SocketEvents.GAME_QUESTION_END, {
         questionId: currentQuestion.id,
         correctOptionId: results.correctOptionId,
       });
+
+      // Enviar estadísticas finales al host
+      this.sendStatsToHost(code);
 
       // Mostrar resultados después de 1 segundo
       setTimeout(() => {
@@ -220,13 +302,16 @@ export class GameSocketHandler {
           question: currentQuestion,
         });
 
+        // Enviar estadísticas al host después de mostrar resultados
+        this.sendStatsToHost(code);
+
         // Mostrar ranking después de 3 segundos
         setTimeout(() => {
           this.showRanking(code);
         }, 3000);
       }, 1000);
 
-      console.log(`✅ Question ${game.currentQuestionIndex + 1} ended in game ${code}`);
+      console.log(`Question ${game.currentQuestionIndex + 1} ended in game ${code}`);
     } catch (error) {
       console.error('Error ending question:', error);
     }
@@ -245,9 +330,24 @@ export class GameSocketHandler {
         topPlayers,
       });
 
-      console.log(`✅ Ranking shown for game ${code}`);
+      console.log(`Ranking shown for game ${code}`);
     } catch (error) {
       console.error('Error showing ranking:', error);
+    }
+  }
+
+  /**
+   * Envía estadísticas en tiempo real al host
+   * @param code - Código del juego
+   */
+  private sendStatsToHost(code: string): void {
+    try {
+      const stats = GameService.getGameStats(code);
+      if (stats) {
+        this.io.to(code).emit(SocketEvents.GAME_STATS_UPDATE, stats);
+      }
+    } catch (error) {
+      console.error('Error sending stats to host:', error);
     }
   }
 
@@ -266,7 +366,7 @@ export class GameSocketHandler {
         questionHistory,
       });
 
-      console.log(`✅ Game ${code} finished`);
+      console.log(`Game ${code} finished`);
     } catch (error) {
       console.error('Error finishing game:', error);
     }

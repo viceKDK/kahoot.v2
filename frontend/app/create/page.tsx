@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import { useGameStore } from '@/store/gameStore';
-import { SocketEvents, Quiz } from '@/shared/types';
+import { SocketEvents, Quiz, GameMode } from '@/shared/types';
 import { UserStorage } from '@/lib/userStorage';
 import { motion } from 'framer-motion';
 
@@ -23,6 +23,7 @@ export default function CreateGamePage() {
   const [loading, setLoading] = useState(true);
   const [hostName, setHostName] = useState('');
   const [selectedQuizId, setSelectedQuizId] = useState('');
+  const [mode, setMode] = useState<GameMode>(GameMode.FAST);
 
   // Fetch quizzes
   useEffect(() => {
@@ -93,6 +94,7 @@ export default function CreateGamePage() {
     socket.emit(SocketEvents.HOST_CREATE_GAME, {
       quizId: selectedQuizId,
       hostName: hostName.trim(),
+      mode,
     });
   };
 
@@ -137,8 +139,38 @@ export default function CreateGamePage() {
             </div>
 
             {/* Quiz Selection */}
-            <div className="card-white p-6">
-              <label className="block text-lg font-bold mb-4 text-gray-900">
+            <div className="card-white p-6 space-y-4">
+              <div>
+                <label className="block text-lg font-bold mb-2 text-gray-900">
+                  Modo de Juego
+                </label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setMode(GameMode.FAST)}
+                    className={`flex-1 px-4 py-3 rounded-xl border-2 font-semibold ${
+                      mode === GameMode.FAST
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Rápido (avanza cuando todos responden)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode(GameMode.WAIT_ALL)}
+                    className={`flex-1 px-4 py-3 rounded-xl border-2 font-semibold ${
+                      mode === GameMode.WAIT_ALL
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Siempre esperar al tiempo
+                  </button>
+                </div>
+              </div>
+
+              <label className="block text-lg font-bold mb-2 text-gray-900">
                 Selecciona un Quiz
               </label>
               <div className="grid gap-4">

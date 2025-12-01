@@ -21,7 +21,10 @@ export default function HostLobbyPage() {
   const { game, currentPlayer, isConnected } = useGameStore();
 
   const code = params.code as string;
-  const joinUrl = `${window.location.origin}/join/${code}`;
+  const joinUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/join/${code}`
+      : '';
 
   // Redirect cuando el juego inicia
   useEffect(() => {
@@ -65,10 +68,18 @@ export default function HostLobbyPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="mb-8"
         >
-          <h1 className="text-5xl font-bold text-white mb-2">Sala Creada</h1>
-          <p className="text-2xl text-white/80">{game.quiz.title}</p>
+          <button
+            onClick={() => router.push('/')}
+            className="text-white/80 hover:text-white mb-4"
+          >
+            ← Volver al Inicio
+          </button>
+          <div className="text-center">
+            <h1 className="text-5xl font-bold text-white mb-2">Sala Creada</h1>
+            <p className="text-2xl text-white/80">{game.quiz.title}</p>
+          </div>
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8">

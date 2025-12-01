@@ -14,6 +14,8 @@ import Timer from '@/components/Timer';
 import OptionButton from '@/components/OptionButton';
 import RankingList from '@/components/RankingList';
 import Podium from '@/components/Podium';
+import AnswerPopup from '@/components/AnswerPopup';
+import HostStatsTable from '@/components/HostStatsTable';
 import { motion } from 'framer-motion';
 
 export default function GamePage() {
@@ -27,6 +29,7 @@ export default function GamePage() {
     questionStartTime,
     questionResults,
     ranking,
+    gameStats,
     finalData,
     hasAnswered,
     selectedOptionId,
@@ -38,6 +41,14 @@ export default function GamePage() {
   const code = params.code as string;
   const [showResults, setShowResults] = useState(false);
   const [showRanking, setShowRanking] = useState(false);
+  const [showAnswerPopup, setShowAnswerPopup] = useState(false);
+  const [answerData, setAnswerData] = useState<{
+    isCorrect: boolean;
+    pointsEarned: number;
+  } | null>(null);
+
+  // Verificar si el usuario actual es el host
+  const isHost = currentPlayer?.isHost === true;
 
   // Redirect si el juego terminó
   useEffect(() => {
@@ -46,13 +57,33 @@ export default function GamePage() {
     }
   }, [finalData, code, router]);
 
+  // Mostrar pop-up de respuesta cuando llegan los resultados
+  useEffect(() => {
+    if (questionResults && currentPlayer) {
+      const playerAnswer = questionResults.playerAnswers.find(
+        (a) => a.playerId === currentPlayer.id
+      );
+
+      if (playerAnswer) {
+        setAnswerData({
+          isCorrect: playerAnswer.isCorrect,
+          pointsEarned: playerAnswer.pointsEarned,
+        });
+        setShowAnswerPopup(true);
+      }
+    }
+  }, [questionResults, currentPlayer]);
+
   // Mostrar resultados cuando llegan
   useEffect(() => {
     if (questionResults) {
-      setShowResults(true);
+      // Esperar a que el pop-up termine antes de mostrar resultados
       setTimeout(() => {
-        setShowResults(false);
-      }, 5000);
+        setShowResults(true);
+        setTimeout(() => {
+          setShowResults(false);
+        }, 5000);
+      }, 2500);
     }
   }, [questionResults]);
 
@@ -99,6 +130,39 @@ export default function GamePage() {
 
   // Mostrar ranking
   if (showRanking && ranking) {
+    // Host siempre ve estadísticas
+    if (isHost) {
+      return (
+        <div className="min-h-screen p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 text-center"
+            >
+              <h1 className="text-4xl font-bold text-white mb-2">
+                Vista del Host - Panel de Control
+              </h1>
+              <p className="text-white/80 text-lg">{game?.quiz.title}</p>
+            </motion.div>
+
+            {gameStats ? (
+              <HostStatsTable
+                playerStats={gameStats.playerStats}
+                currentQuestionNumber={gameStats.currentQuestionIndex}
+                totalQuestions={gameStats.totalQuestions}
+              />
+            ) : (
+              <div className="card-white p-8 text-center">
+                <div className="spinner mx-auto mb-4" />
+                <p className="text-gray-600">Cargando estadísticas...</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen p-8">
         <div className="max-w-4xl mx-auto">
@@ -123,38 +187,81 @@ export default function GamePage() {
 
   // Mostrar resultados de la pregunta
   if (showResults && questionResults && currentQuestion) {
+    // Host siempre ve estadísticas
+    if (isHost) {
+      return (
+        <div className="min-h-screen p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 text-center"
+            >
+              <h1 className="text-4xl font-bold text-white mb-2">
+                Vista del Host - Panel de Control
+              </h1>
+              <p className="text-white/80 text-lg">{game?.quiz.title}</p>
+            </motion.div>
+
+            {gameStats ? (
+              <HostStatsTable
+                playerStats={gameStats.playerStats}
+                currentQuestionNumber={gameStats.currentQuestionIndex}
+                totalQuestions={gameStats.totalQuestions}
+              />
+            ) : (
+              <div className="card-white p-8 text-center">
+                <div className="spinner mx-auto mb-4" />
+                <p className="text-gray-600">Cargando estadísticas...</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen p-4 md:p-8">
+        <div className="max-w-6xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
           >
             {/* Image (if exists) */}
             {currentQuestion.imageUrl && (
-              <div className="flex justify-center mb-6">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring' }}
+                className="flex justify-center mb-6"
+              >
                 <img
                   src={currentQuestion.imageUrl}
                   alt="Question"
-                  className="max-h-48 rounded-2xl shadow-2xl object-cover"
+                  className="max-h-56 rounded-3xl shadow-2xl object-cover border-4 border-white/30"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
-              </div>
+              </motion.div>
             )}
 
-            <h1 className="text-4xl font-bold text-white text-center mb-8">
+            <motion.h1
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="text-3xl md:text-4xl font-black text-white text-center mb-8 drop-shadow-lg"
+            >
               {currentQuestion.text}
-            </h1>
+            </motion.h1>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
               {currentQuestion.options.map((option, index) => (
                 <motion.div
                   key={option.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: index * 0.1, type: 'spring' }}
+                  className="relative"
                 >
                   <OptionButton
                     option={option}
@@ -165,8 +272,13 @@ export default function GamePage() {
                     showCorrect={true}
                   />
                   {/* Stats */}
-                  <div className="mt-2 px-4">
-                    <div className="flex justify-between text-white/80 text-sm mb-1">
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: index * 0.1 + 0.3, duration: 0.5 }}
+                    className="mt-3 px-4"
+                  >
+                    <div className="flex justify-between text-white font-bold text-base mb-2">
                       <span>
                         {questionResults.optionVotes[option.id] || 0} votos
                       </span>
@@ -179,54 +291,24 @@ export default function GamePage() {
                         %
                       </span>
                     </div>
-                    <div className="w-full bg-white/20 rounded-full h-3">
-                      <div
-                        className="bg-white h-3 rounded-full transition-all"
-                        style={{
+                    <div className="w-full bg-white/30 rounded-full h-4 overflow-hidden shadow-inner">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{
                           width: `${
                             ((questionResults.optionVotes[option.id] || 0) /
                               questionResults.totalPlayers) *
                             100
                           }%`,
                         }}
+                        transition={{ delay: index * 0.1 + 0.5, duration: 0.8 }}
+                        className="bg-white h-4 rounded-full shadow-lg"
                       />
                     </div>
-                  </div>
+                  </motion.div>
                 </motion.div>
               ))}
             </div>
-
-            {/* Player result */}
-            {currentPlayer && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="mt-8 card-white p-6 text-center"
-              >
-                <div className="text-6xl mb-4">
-                  {questionResults.playerAnswers.find(
-                    (a) => a.playerId === currentPlayer.id
-                  )?.isCorrect
-                    ? '✅'
-                    : '❌'}
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {questionResults.playerAnswers.find(
-                    (a) => a.playerId === currentPlayer.id
-                  )?.isCorrect
-                    ? '¡Correcto!'
-                    : 'Incorrecto'}
-                </h2>
-                <p className="text-3xl font-bold text-primary mt-2">
-                  +
-                  {questionResults.playerAnswers.find(
-                    (a) => a.playerId === currentPlayer.id
-                  )?.pointsEarned || 0}{' '}
-                  puntos
-                </p>
-              </motion.div>
-            )}
           </motion.div>
         </div>
       </div>
@@ -235,32 +317,69 @@ export default function GamePage() {
 
   // Mostrar pregunta activa
   if (game.status === GameStatus.QUESTION && currentQuestion && questionStartTime) {
+    // Vista especial para el host: tabla de estadísticas
+    if (isHost) {
+      return (
+        <div className="min-h-screen p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 text-center"
+            >
+              <h1 className="text-4xl font-bold text-white mb-2">
+                Vista del Host - Panel de Control
+              </h1>
+              <p className="text-white/80 text-lg">{game.quiz.title}</p>
+            </motion.div>
+
+            {gameStats ? (
+              <HostStatsTable
+                playerStats={gameStats.playerStats}
+                currentQuestionNumber={gameStats.currentQuestionIndex}
+                totalQuestions={gameStats.totalQuestions}
+              />
+            ) : (
+              <div className="card-white p-8 text-center">
+                <div className="spinner mx-auto mb-4" />
+                <p className="text-gray-600">Cargando estadísticas...</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Vista normal para jugadores
     return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
+      <>
+        <div className="min-h-screen p-4 md:p-8 flex flex-col">
+          <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col">
             {/* Timer */}
-            <div className="flex justify-center mb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="flex justify-center mb-6"
+            >
               <Timer
                 startTime={questionStartTime}
                 duration={currentQuestion.timeLimit}
               />
-            </div>
+            </motion.div>
 
             {/* Image (if exists) */}
             {currentQuestion.imageUrl && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex justify-center mb-8"
+                initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', duration: 0.6 }}
+                className="flex justify-center mb-6"
               >
                 <img
                   src={currentQuestion.imageUrl}
                   alt="Question"
-                  className="max-h-64 rounded-2xl shadow-2xl object-cover"
+                  className="max-h-72 rounded-3xl shadow-2xl object-cover border-4 border-white/30"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
@@ -269,18 +388,32 @@ export default function GamePage() {
             )}
 
             {/* Question */}
-            <h1 className="text-4xl font-bold text-white text-center mb-12">
-              {currentQuestion.text}
-            </h1>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, type: 'spring' }}
+              className="mb-8"
+            >
+              <h1 className="text-4xl md:text-5xl font-black text-white text-center drop-shadow-lg leading-tight px-4">
+                {currentQuestion.text}
+              </h1>
+            </motion.div>
 
             {/* Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 flex-1 content-start">
               {currentQuestion.options.map((option, index) => (
                 <motion.div
                   key={option.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
+                  initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  transition={{
+                    delay: 0.3 + index * 0.1,
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 15,
+                  }}
+                  whileHover={{ scale: hasAnswered ? 1 : 1.05 }}
+                  whileTap={{ scale: hasAnswered ? 1 : 0.95 }}
                 >
                   <OptionButton
                     option={option}
@@ -296,32 +429,64 @@ export default function GamePage() {
             {/* Answer status */}
             {hasAnswered && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-8 text-center"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring' }}
+                className="mt-6 text-center"
               >
-                <div className="card-white p-6 inline-block">
-                  <p className="text-2xl font-bold text-primary">
-                    ✅ Respuesta enviada
-                  </p>
-                  <p className="text-gray-600 mt-2">
-                    Esperando a los demás jugadores...
-                  </p>
+                <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-sm px-8 py-4 rounded-full shadow-2xl">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="text-3xl"
+                  >
+                    ✅
+                  </motion.div>
+                  <div>
+                    <p className="text-2xl font-black text-primary">
+                      Respuesta enviada
+                    </p>
+                    <p className="text-gray-600 text-sm font-medium">
+                      Esperando a los demás...
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             )}
-          </motion.div>
+          </div>
         </div>
-      </div>
+
+        {/* Answer Popup */}
+        {answerData && (
+          <AnswerPopup
+            isCorrect={answerData.isCorrect}
+            pointsEarned={answerData.pointsEarned}
+            show={showAnswerPopup}
+            onComplete={() => setShowAnswerPopup(false)}
+          />
+        )}
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="spinner mx-auto mb-4" />
-        <p className="text-white text-xl">Cargando...</p>
+    <>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner mx-auto mb-4" />
+          <p className="text-white text-xl">Cargando...</p>
+        </div>
       </div>
-    </div>
+
+      {/* Answer Popup */}
+      {answerData && (
+        <AnswerPopup
+          isCorrect={answerData.isCorrect}
+          pointsEarned={answerData.pointsEarned}
+          show={showAnswerPopup}
+          onComplete={() => setShowAnswerPopup(false)}
+        />
+      )}
+    </>
   );
 }

@@ -61,9 +61,13 @@ export default function OptionButton({
       disabled={isDisabled}
       className={getButtonClass()}
     >
-      <div className="flex items-center justify-between px-4">
-        <span className="text-3xl mr-4">{shape}</span>
-        <span className="flex-1 text-center">{option.text}</span>
+      <div className="flex items-center gap-6 px-6">
+        <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-white/20 rounded-2xl">
+          <span className="text-5xl drop-shadow-lg">{shape}</span>
+        </div>
+        <span className="flex-1 text-left font-black tracking-tight leading-tight">
+          {option.text}
+        </span>
       </div>
     </button>
   );

@@ -13,6 +13,7 @@ import {
   GameStatus,
   PlayerStatus,
   AVATAR_PRESETS,
+  GameMode,
 } from '../../../shared/types';
 import QuizRepository from '../models/QuizRepository';
 import GameSessionRepository from '../models/GameSessionRepository';
@@ -29,12 +30,14 @@ export class GameService {
    * @param quizId - ID del quiz a jugar
    * @param hostName - Nombre del host
    * @param baseUrl - URL base para generar el link de invitación
+   * @param mode - Modo de juego (FAST / WAIT_ALL)
    * @returns Juego creado con QR y URL
    */
   async createGame(
     quizId: string,
     hostName: string,
-    baseUrl: string
+    baseUrl: string,
+    mode: GameMode = GameMode.FAST
   ): Promise<{ game: Game; qrCode: string; joinUrl: string }> {
     // Obtener quiz de la BD
     const quiz = await QuizRepository.getQuizById(quizId);
@@ -48,30 +51,20 @@ export class GameService {
       code = generateGameCode();
     }
 
-    // Crear jugador host
-    const hostPlayer: Player = {
-      id: `host_${Date.now()}`,
-      name: hostName,
-      avatar: this.getRandomAvatar(),
-      status: PlayerStatus.READY,
-      score: 0,
-      streak: 0,
-      correctAnswers: 0,
-      totalAnswers: 0,
-      accuracy: 0,
-      isHost: true,
-      joinedAt: new Date(),
-    };
+    // Generar ID del host (pero no crear jugador)
+    const hostId = `host_${Date.now()}`;
 
-    // Crear juego en memoria
+    // Crear juego en memoria (sin el host como jugador)
     const game: Game = {
       id: code, // Usar código como ID
       code,
       quizId,
       quiz,
-      hostId: hostPlayer.id,
+      hostId,
+      hostName,
       status: GameStatus.LOBBY,
-      players: [hostPlayer],
+      mode,
+      players: [],
       currentQuestionIndex: -1,
       results: [],
       createdAt: new Date(),
@@ -186,27 +179,22 @@ export class GameService {
   }
 
   /**
-   * Un jugador envía una respuesta
-   * @param code - Código del juego
+   * Registra la respuesta de un jugador
+   * @param gameId - Código del juego
    * @param playerId - ID del jugador
-   * @param optionId - ID de la opción seleccionada
-   * @param timeElapsed - Tiempo que tardó en responder (ms)
-   * @returns Respuesta procesada
+   * @param optionId - Opción elegida
+   * @param timeElapsed - Tiempo transcurrido
+   * @returns Respuesta y si todos los jugadores ya respondieron
    */
   submitAnswer(
-    code: string,
+    gameId: string,
     playerId: string,
     optionId: string,
     timeElapsed: number
-  ): PlayerAnswer {
-    const game = this.activeGames.get(code);
+  ): { answer: PlayerAnswer; allAnswered: boolean } {
+    const game = this.activeGames.get(gameId);
     if (!game) {
       throw new Error('Game not found');
-    }
-
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) {
-      throw new Error('Player not found');
     }
 
     const currentQuestion = game.quiz.questions[game.currentQuestionIndex];
@@ -214,38 +202,31 @@ export class GameService {
       throw new Error('No current question');
     }
 
-    // Verificar si ya respondió
-    const existingResults = game.results[game.currentQuestionIndex];
-    if (existingResults) {
-      const alreadyAnswered = existingResults.playerAnswers.some(
-        (a) => a.playerId === playerId
-      );
-      if (alreadyAnswered) {
-        throw new Error('Already answered this question');
-      }
+    const player = game.players.find((p) => p.id === playerId);
+    if (!player) {
+      throw new Error('Player not found');
     }
 
-    // Verificar si la opción es correcta
     const selectedOption = currentQuestion.options.find((o) => o.id === optionId);
     if (!selectedOption) {
-      throw new Error('Invalid option');
+      throw new Error('Option not found');
     }
 
     const isCorrect = selectedOption.isCorrect;
+    const pointsEarned = isCorrect
+      ? ScoringService.calculatePoints(
+          currentQuestion.timeLimit,
+          timeElapsed,
+          player.streak
+        )
+      : 0;
 
-    // Calcular puntos
-    let pointsEarned = 0;
+    // Actualizar estadísticas del jugador
+    player.totalAnswers += 1;
     if (isCorrect) {
-      pointsEarned = ScoringService.calculatePoints(
-        currentQuestion.timeLimit,
-        timeElapsed,
-        player.streak
-      );
-      player.correctAnswers++;
+      player.correctAnswers += 1;
+      player.score += pointsEarned;
     }
-
-    player.totalAnswers++;
-    player.score += pointsEarned;
     player.streak = ScoringService.updateStreak(player.streak, isCorrect);
     player.accuracy = ScoringService.calculateAccuracy(
       player.correctAnswers,
@@ -274,13 +255,22 @@ export class GameService {
       };
     }
 
-    game.results[game.currentQuestionIndex].playerAnswers.push(answer);
+    const questionResults = game.results[game.currentQuestionIndex];
+    questionResults.playerAnswers.push(answer);
 
     // Actualizar votos
-    const votes = game.results[game.currentQuestionIndex].optionVotes;
+    const votes = questionResults.optionVotes;
     votes[optionId] = (votes[optionId] || 0) + 1;
 
-    return answer;
+    // Consideramos "todos respondieron" cuando:
+    // - Hay al menos un jugador, y
+    // - El número de respuestas alcanza el número de jugadores
+    const totalPlayers = game.players.length;
+    const allAnswered =
+      totalPlayers > 0 &&
+      questionResults.playerAnswers.length >= totalPlayers;
+
+    return { answer, allAnswered };
   }
 
   /**
@@ -410,6 +400,61 @@ export class GameService {
     if (game.players.length === 0) {
       this.activeGames.delete(code);
     }
+  }
+
+  /**
+   * Obtiene estadísticas en tiempo real para el host
+   * @param code - Código del juego
+   * @returns Estadísticas del juego
+   */
+  getGameStats(code: string): {
+    currentQuestionIndex: number;
+    totalQuestions: number;
+    playerStats: Array<{
+      player: Player;
+      correctAnswers: number;
+      incorrectAnswers: number;
+      totalAnswers: number;
+      correctPercentage: number;
+      incorrectPercentage: number;
+      score: number;
+      accuracy: number;
+    }>;
+  } | null {
+    const game = this.activeGames.get(code);
+    if (!game) {
+      return null;
+    }
+
+    const playerStats = game.players.map((player) => {
+      const incorrectAnswers = player.totalAnswers - player.correctAnswers;
+      const correctPercentage = player.totalAnswers > 0
+        ? (player.correctAnswers / player.totalAnswers) * 100
+        : 0;
+      const incorrectPercentage = player.totalAnswers > 0
+        ? (incorrectAnswers / player.totalAnswers) * 100
+        : 0;
+
+      return {
+        player,
+        correctAnswers: player.correctAnswers,
+        incorrectAnswers,
+        totalAnswers: player.totalAnswers,
+        correctPercentage: Math.round(correctPercentage * 10) / 10,
+        incorrectPercentage: Math.round(incorrectPercentage * 10) / 10,
+        score: player.score,
+        accuracy: player.accuracy,
+      };
+    });
+
+    // Ordenar por puntaje descendente
+    playerStats.sort((a, b) => b.score - a.score);
+
+    return {
+      currentQuestionIndex: game.currentQuestionIndex,
+      totalQuestions: game.quiz.questions.length,
+      playerStats,
+    };
   }
 
   /**

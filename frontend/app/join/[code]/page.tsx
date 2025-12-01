@@ -33,8 +33,10 @@ export default function JoinGamePage() {
   const handleJoinGame = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!socket || !isConnected) {
-      alert('No estás conectado al servidor');
+    // Solo comprobamos que exista instancia de socket;
+    // si todavía está conectando, Socket.IO enviará el evento al conectar.
+    if (!socket) {
+      alert('No se pudo conectar al servidor. Recarga la página e inténtalo de nuevo.');
       return;
     }
 
@@ -69,7 +71,7 @@ export default function JoinGamePage() {
             transition={{ delay: 0.2, type: 'spring' }}
             className="text-8xl mb-6"
           >
-            ✅
+            ƒo.
           </motion.div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             ¡Estás Dentro!
@@ -78,7 +80,7 @@ export default function JoinGamePage() {
             Esperando que el host inicie el juego...
           </p>
           <div className="animate-pulse-slow">
-            <div className="text-6xl">🎮</div>
+            <div className="text-6xl">ÐYZ©</div>
           </div>
           <p className="text-gray-500 mt-6">
             Jugadores conectados: {game.players.length}
@@ -139,3 +141,4 @@ export default function JoinGamePage() {
     </div>
   );
 }
+

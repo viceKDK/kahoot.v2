@@ -11,6 +11,11 @@ export enum GameStatus {
   FINISHED = 'FINISHED'
 }
 
+export enum GameMode {
+  FAST = 'FAST',       // Solo espera por tiempo
+  WAIT_ALL = 'WAIT_ALL' // Termina antes si todos responden
+}
+
 export enum PlayerStatus {
   WAITING = 'WAITING',
   READY = 'READY',
@@ -86,7 +91,9 @@ export interface Game {
   quizId: string;
   quiz: Quiz;
   hostId: string;
+  hostName: string;
   status: GameStatus;
+  mode: GameMode;
   players: Player[];
   currentQuestionIndex: number;
   questionStartTime?: number;
@@ -125,6 +132,7 @@ export namespace SocketEvents {
   export const GAME_QUESTION_END = 'game:question_end';
   export const GAME_SHOW_RESULTS = 'game:show_results';
   export const GAME_SHOW_RANKING = 'game:show_ranking';
+  export const GAME_STATS_UPDATE = 'game:stats_update';
   export const GAME_FINISHED = 'game:finished';
   export const PLAYER_JOINED = 'player:joined';
   export const PLAYER_LEFT = 'player:left';
@@ -138,6 +146,7 @@ export namespace SocketEvents {
 export interface CreateGamePayload {
   quizId: string;
   hostName: string;
+  mode?: GameMode;
 }
 
 export interface CreateGameResponse {
@@ -198,6 +207,23 @@ export interface GameFinishedPayload {
 export interface ErrorPayload {
   message: string;
   code?: string;
+}
+
+export interface PlayerStats {
+  player: Player;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  totalAnswers: number;
+  correctPercentage: number;
+  incorrectPercentage: number;
+  score: number;
+  accuracy: number;
+}
+
+export interface GameStatsPayload {
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  playerStats: PlayerStats[];
 }
 
 // ============================================================================

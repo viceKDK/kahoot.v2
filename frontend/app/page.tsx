@@ -8,10 +8,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useGameStore } from '@/store/gameStore';
 
 export default function HomePage() {
   const router = useRouter();
   const [gameCode, setGameCode] = useState('');
+  const { reset } = useGameStore();
 
   const handleJoinGame = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +59,10 @@ export default function HomePage() {
               Elige un quiz y comparte el código con tus amigos
             </p>
             <button
-              onClick={() => router.push('/create')}
+              onClick={() => {
+                reset();
+                router.push('/create');
+              }}
               className="btn-primary w-full"
             >
               Crear Nueva Sala
@@ -134,3 +139,4 @@ export default function HomePage() {
     </div>
   );
 }
+

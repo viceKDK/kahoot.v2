@@ -10,7 +10,7 @@ dotenv.config();
 
 const poolConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  port: parseInt(process.env.DB_PORT || '5432', 10),
   database: process.env.DB_NAME || 'quizarena',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
@@ -25,14 +25,30 @@ class Database {
   private pool: Pool;
 
   private constructor() {
+    // Log de la configuración básica (sin mostrar la contraseña)
+    console.log('Database pool config:', {
+      host: poolConfig.host,
+      port: poolConfig.port,
+      database: poolConfig.database,
+      user: poolConfig.user,
+      max: poolConfig.max,
+      idleTimeoutMillis: poolConfig.idleTimeoutMillis,
+      connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
+    });
+
     this.pool = new Pool(poolConfig);
 
     this.pool.on('connect', () => {
-      console.log('✅ Connected to PostgreSQL database');
+      console.log('Connected to PostgreSQL database');
     });
 
     this.pool.on('error', (err) => {
-      console.error('❌ Unexpected error on idle client', err);
+      console.error('Unexpected error on idle client:', {
+        message: (err as any).message,
+        code: (err as any).code,
+        severity: (err as any).severity,
+        detail: (err as any).detail,
+      });
       process.exit(-1);
     });
   }
@@ -56,15 +72,21 @@ class Database {
       console.log('Executed query', { text, duration, rows: res.rowCount });
       return res;
     } catch (error) {
-      console.error('Database query error:', error);
+      console.error('Database query error:', {
+        message: (error as any).message,
+        code: (error as any).code,
+        severity: (error as any).severity,
+        detail: (error as any).detail,
+      });
       throw error;
     }
   }
 
   public async close(): Promise<void> {
     await this.pool.end();
-    console.log('🔌 Database connection pool closed');
+    console.log('Database connection pool closed');
   }
 }
 
 export default Database.getInstance();
+
