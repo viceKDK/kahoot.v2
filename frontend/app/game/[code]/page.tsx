@@ -199,9 +199,9 @@ export default function GamePage() {
 
             {gameStats ? (
               <HostStatsTable
-                playerStats={gameStats.playerStats}
-                currentQuestionNumber={gameStats.currentQuestionIndex}
-                totalQuestions={gameStats.totalQuestions}
+                playerStats={gameStats?.playerStats ?? []}
+                currentQuestionNumber={gameStats?.currentQuestionIndex ?? 0}
+                totalQuestions={gameStats?.totalQuestions ?? 0}
               />
             ) : (
               <div className="card-white p-8 text-center">
@@ -268,9 +268,9 @@ export default function GamePage() {
 
             {gameStats ? (
               <HostStatsTable
-                playerStats={gameStats.playerStats}
-                currentQuestionNumber={gameStats.currentQuestionIndex}
-                totalQuestions={gameStats.totalQuestions}
+                playerStats={gameStats?.playerStats ?? []}
+                currentQuestionNumber={gameStats?.currentQuestionIndex ?? 0}
+                totalQuestions={gameStats?.totalQuestions ?? 0}
               />
             ) : (
               <div className="card-white p-8 text-center">
@@ -291,7 +291,7 @@ export default function GamePage() {
             animate={{ opacity: 1 }}
           >
             {/* Image (if exists) */}
-            {currentQuestion.imageUrl && (
+            {currentQuestion?.imageUrl && (
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -299,7 +299,7 @@ export default function GamePage() {
                 className="flex justify-center mb-6"
               >
                 <img
-                  src={currentQuestion.imageUrl}
+                  src={currentQuestion?.imageUrl ?? ''}
                   alt="Question"
                   className="max-h-56 rounded-3xl shadow-2xl object-cover border-4 border-white/30"
                   onError={(e) => {
@@ -314,11 +314,11 @@ export default function GamePage() {
               animate={{ y: 0, opacity: 1 }}
               className="text-3xl md:text-4xl font-black text-white text-center mb-8 drop-shadow-lg"
             >
-              {currentQuestion.text}
+              {currentQuestion?.text ?? ''}
             </motion.h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
-              {currentQuestion.options.map((option, index) => (
+              {(currentQuestion?.options ?? []).map((option, index) => (
                 <motion.div
                   key={option.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -338,32 +338,32 @@ export default function GamePage() {
                   <motion.div
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ delay: index * 0.1 + 0.3, duration: 0.5 }}
-                    className="mt-3 px-4"
-                  >
-                    <div className="flex justify-between text-white font-bold text-base mb-2">
-                      <span>
-                        {questionResults.optionVotes[option.id] || 0} votos
-                      </span>
-                      <span>
-                        {Math.round(
-                          ((questionResults.optionVotes[option.id] || 0) /
-                            questionResults.totalPlayers) *
-                            100
-                        )}
-                        %
-                      </span>
-                    </div>
+                  transition={{ delay: index * 0.1 + 0.3, duration: 0.5 }}
+                  className="mt-3 px-4"
+                >
+                  <div className="flex justify-between text-white font-bold text-base mb-2">
+                    <span>
+                      {(questionResults?.optionVotes?.[option.id] ?? 0)} votos
+                    </span>
+                    <span>
+                      {Math.round(
+                        ((questionResults?.optionVotes?.[option.id] ?? 0) /
+                          Math.max(questionResults?.totalPlayers ?? 1, 1)) *
+                          100
+                      )}
+                      %
+                    </span>
+                  </div>
                     <div className="w-full bg-white/30 rounded-full h-4 overflow-hidden shadow-inner">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{
-                          width: `${
-                            ((questionResults.optionVotes[option.id] || 0) /
-                              questionResults.totalPlayers) *
-                            100
-                          }%`,
-                        }}
+                      animate={{
+                        width: `${
+                          ((questionResults?.optionVotes?.[option.id] ?? 0) /
+                            Math.max(questionResults?.totalPlayers ?? 1, 1)) *
+                          100
+                        }%`,
+                      }}
                         transition={{ delay: index * 0.1 + 0.5, duration: 0.8 }}
                         className="bg-white h-4 rounded-full shadow-lg"
                       />
@@ -398,9 +398,9 @@ export default function GamePage() {
 
             {gameStats ? (
               <HostStatsTable
-                playerStats={gameStats.playerStats}
-                currentQuestionNumber={gameStats.currentQuestionIndex}
-                totalQuestions={gameStats.totalQuestions}
+                playerStats={gameStats?.playerStats ?? []}
+                currentQuestionNumber={gameStats?.currentQuestionIndex ?? 0}
+                totalQuestions={gameStats?.totalQuestions ?? 0}
               />
             ) : (
               <div className="card-white p-8 text-center">

@@ -440,6 +440,13 @@ export class GameService {
       return null;
     }
 
+    // Derivar el índice de pregunta más avanzado entre los jugadores (WAIT_ALL)
+    const playerQuestionIndices = Object.values(game.playerStates || {}).map(
+      (ps) => ps.currentQuestionIndex ?? -1
+    );
+    const derivedCurrentIndex =
+      playerQuestionIndices.length > 0 ? Math.max(...playerQuestionIndices) : game.currentQuestionIndex;
+
     const playerStats = game.players.map((player) => {
       const incorrectAnswers = player.totalAnswers - player.correctAnswers;
       const correctPercentage = player.totalAnswers > 0
@@ -465,7 +472,7 @@ export class GameService {
     playerStats.sort((a, b) => b.score - a.score);
 
     return {
-      currentQuestionIndex: game.currentQuestionIndex,
+      currentQuestionIndex: derivedCurrentIndex,
       totalQuestions: game.quiz.questions.length,
       playerStats,
     };
@@ -639,7 +646,7 @@ export class GameService {
       throw new Error('Player state not found');
     }
 
-    // Verificar si hay mas preguntas
+    // Verificar si hay más preguntas
     if (playerState.currentQuestionIndex + 1 >= game.quiz.questions.length) {
       playerState.status = 'FINISHED';
       return false;

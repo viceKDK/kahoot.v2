@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import { useGameStore } from '@/store/gameStore';
-import { SocketEvents, GameStatus } from '@/shared/types';
+import { SocketEvents, GameStatus, GameMode } from '@/shared/types';
 import PlayerCard from '@/components/PlayerCard';
 import HostStatsTable from '@/components/HostStatsTable';
 import { QRCodeSVG } from 'qrcode.react';
