@@ -24,6 +24,7 @@ export default function EditQuizPage() {
   const [questions, setQuestions] = useState<Omit<Question, 'id'>[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [originalCreatedBy, setOriginalCreatedBy] = useState<string>(''); // Guardar creador original
 
   useEffect(() => {
     fetchQuiz();
@@ -39,13 +40,16 @@ export default function EditQuizPage() {
       if (result.success) {
         const quiz: Quiz = result.data;
 
-        // Verificar que es del usuario actual
-        const userId = UserStorage.getUserId();
-        if (quiz.createdBy !== userId) {
-          alert('No tienes permiso para editar este quiz');
-          router.push('/quizzes/my-quizzes');
-          return;
-        }
+        // TEMPORAL: Permitir editar cualquier quiz hasta implementar sistema de cuentas
+        // const userId = UserStorage.getUserId();
+        // if (quiz.createdBy !== userId) {
+        //   alert('No tienes permiso para editar este quiz');
+        //   router.push('/quizzes/my-quizzes');
+        //   return;
+        // }
+
+        // Guardar el creador original para mantenerlo al actualizar
+        setOriginalCreatedBy(quiz.createdBy);
 
         setTitle(quiz.title);
         setDescription(quiz.description || '');
@@ -116,12 +120,11 @@ export default function EditQuizPage() {
       });
 
       // Crear uno nuevo con los mismos datos actualizados
-      const userId = UserStorage.getUserId();
-
+      // MANTENER el creador original, no cambiar al usuario actual
       const quizData = {
         title: title.trim(),
         description: description.trim(),
-        createdBy: userId,
+        createdBy: originalCreatedBy, // Mantener creador original
         isPublic,
         questions,
       };

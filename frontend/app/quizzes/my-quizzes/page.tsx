@@ -16,19 +16,28 @@ export default function MyQuizzesPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
+  const [showAll, setShowAll] = useState(false); // false = mis quizzes, true = todos los quizzes
 
   useEffect(() => {
     const name = UserStorage.getUserName();
     setUserName(name);
-    fetchMyQuizzes();
-  }, []);
+    fetchQuizzes();
+  }, [showAll]); // Re-fetch cuando cambia showAll
 
-  const fetchMyQuizzes = async () => {
+  const fetchQuizzes = async () => {
+    setLoading(true);
     try {
-      const userId = UserStorage.getUserId();
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/creator/${userId}`
-      );
+      let endpoint;
+      if (showAll) {
+        // Obtener TODOS los quizzes
+        endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes`;
+      } else {
+        // Obtener solo mis quizzes
+        const userId = UserStorage.getUserId();
+        endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/creator/${userId}`;
+      }
+
+      const response = await fetch(endpoint);
       const result = await response.json();
 
       if (result.success) {
@@ -56,7 +65,7 @@ export default function MyQuizzesPage() {
 
       if (result.success) {
         alert('✅ Quiz eliminado');
-        fetchMyQuizzes();
+        fetchQuizzes();
       } else {
         alert('❌ Error al eliminar: ' + result.error);
       }
@@ -105,7 +114,7 @@ export default function MyQuizzesPage() {
 
       if (createResult.success) {
         alert('✅ Quiz duplicado exitosamente!');
-        fetchMyQuizzes();
+        fetchQuizzes();
       } else {
         alert('❌ Error al duplicar: ' + createResult.error);
       }
@@ -143,12 +152,24 @@ export default function MyQuizzesPage() {
           >
             ← Volver al Inicio
           </button>
-          <h1 className="text-5xl font-bold text-white mb-2">
-            Mis Quizzes
-          </h1>
-          <p className="text-xl text-white/80">
-            Gestiona tus quizzes creados
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-5xl font-bold text-white mb-2">
+                {showAll ? 'Todos los Quizzes' : 'Mis Quizzes'}
+              </h1>
+              <p className="text-xl text-white/80">
+                {showAll
+                  ? 'Explora y gestiona todos los quizzes disponibles'
+                  : 'Gestiona tus quizzes creados'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="btn-primary px-6 py-3 whitespace-nowrap"
+            >
+              {showAll ? '👤 Ver Mis Quizzes' : '🌍 Ver Todos'}
+            </button>
+          </div>
         </div>
 
         {/* Actions */}
@@ -174,16 +195,20 @@ export default function MyQuizzesPage() {
           >
             <div className="text-6xl mb-4">📚</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              No tienes quizzes todavía
+              {showAll
+                ? 'No hay quizzes disponibles'
+                : 'No tienes quizzes todavía'}
             </h2>
             <p className="text-gray-600 mb-6">
-              Crea tu primer quiz para comenzar
+              {showAll
+                ? 'Sé el primero en crear un quiz'
+                : 'Crea tu primer quiz para comenzar'}
             </p>
             <button
               onClick={() => router.push('/quizzes/create')}
               className="btn-primary"
             >
-              Crear Mi Primer Quiz
+              {showAll ? 'Crear Nuevo Quiz' : 'Crear Mi Primer Quiz'}
             </button>
           </motion.div>
         ) : (

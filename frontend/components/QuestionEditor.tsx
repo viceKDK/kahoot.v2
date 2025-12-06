@@ -27,7 +27,7 @@ export default function QuestionEditor({
 }: QuestionEditorProps) {
   const [questionText, setQuestionText] = useState(question?.text || '');
   const [imageUrl, setImageUrl] = useState(question?.imageUrl || '');
-  const [timeLimit, setTimeLimit] = useState((question?.timeLimit || 15000) / 1000); // en segundos
+  const [timeLimit, setTimeLimit] = useState((question?.timeLimit || 60000) / 1000); // en segundos (por defecto 60s)
   const [options, setOptions] = useState<Omit<QuestionOption, 'id'>[]>(
     question?.options.map(o => ({ text: o.text, isCorrect: o.isCorrect })) || [
       { text: '', isCorrect: false },
@@ -156,7 +156,7 @@ export default function QuestionEditor({
           <input
             type="range"
             min="10"
-            max="60"
+            max="120"
             step="5"
             value={timeLimit}
             onChange={(e) => setTimeLimit(Number(e.target.value))}

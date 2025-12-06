@@ -36,7 +36,17 @@ interface GameState {
   isConnected: boolean;
   hasAnswered: boolean;
   selectedOptionId: string | null;
-  transitionState: 'idle' | 'answering' | 'showing_feedback' | 'showing_ranking' | 'loading_next';
+  transitionState:
+    | 'idle'
+    | 'answering'
+    | 'showing_feedback'
+    | 'showing_ranking'
+    | 'loading_next'
+    | 'waiting_others';
+  waitingForOthers: {
+    answeredCount: number;
+    totalPlayers: number;
+  } | null;
 
   // Feedback data
   answerFeedback: {
@@ -58,8 +68,17 @@ interface GameState {
   setIsConnected: (connected: boolean) => void;
   setHasAnswered: (answered: boolean) => void;
   setSelectedOptionId: (optionId: string | null) => void;
-  setTransitionState: (state: 'idle' | 'answering' | 'showing_feedback' | 'showing_ranking' | 'loading_next') => void;
+  setTransitionState: (
+    state:
+      | 'idle'
+      | 'answering'
+      | 'showing_feedback'
+      | 'showing_ranking'
+      | 'loading_next'
+      | 'waiting_others'
+  ) => void;
   setAnswerFeedback: (feedback: any) => void;
+  setWaitingForOthers: (info: { answeredCount: number; totalPlayers: number } | null) => void;
   updateGameStatus: (status: GameStatus) => void;
   updatePlayers: (players: Player[]) => void;
   reset: () => void;
@@ -81,6 +100,7 @@ const initialState = {
   selectedOptionId: null,
   transitionState: 'idle' as const,
   answerFeedback: null,
+  waitingForOthers: null,
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -100,6 +120,7 @@ export const useGameStore = create<GameState>((set) => ({
       selectedOptionId: null,
       transitionState: 'idle',
       answerFeedback: null,
+      waitingForOthers: null,
     }),
 
   setQuestionResults: (results) => set({ questionResults: results }),
@@ -109,6 +130,8 @@ export const useGameStore = create<GameState>((set) => ({
   setTransitionState: (state) => set({ transitionState: state }),
 
   setAnswerFeedback: (feedback) => set({ answerFeedback: feedback, transitionState: 'showing_feedback' }),
+
+  setWaitingForOthers: (info) => set({ waitingForOthers: info }),
 
   setGameStats: (stats) => set({ gameStats: stats }),
 

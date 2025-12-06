@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSocket } from '@/hooks/useSocket';
+import { useSocket, getCurrentSocket } from '@/hooks/useSocket';
 import { useGameStore } from '@/store/gameStore';
 import { SocketEvents, GameStatus } from '@/shared/types';
 import Timer from '@/components/Timer';
@@ -21,7 +21,8 @@ import { motion } from 'framer-motion';
 export default function GamePage() {
   const params = useParams();
   const router = useRouter();
-  const socket = useSocket();
+  // Inicializa listeners de socket (no usamos el valor de retorno directamente)
+  useSocket();
   const {
     game,
     currentPlayer,
@@ -36,6 +37,7 @@ export default function GamePage() {
     selectedOptionId,
     transitionState,
     answerFeedback,
+    waitingForOthers,
     setHasAnswered,
     setSelectedOptionId,
     isConnected,
@@ -54,6 +56,7 @@ export default function GamePage() {
   }, [finalData, code, router]);
 
   const handleAnswerSelect = (optionId: string) => {
+    const socket = getCurrentSocket();
     console.log('🎯 handleAnswerSelect called with optionId:', optionId);
     console.log('   socket:', socket ? 'Connected' : 'Not connected');
     console.log('   isConnected:', isConnected);
@@ -107,6 +110,21 @@ export default function GamePage() {
         <div className="text-center">
           <div className="spinner mx-auto mb-4" />
           <p className="text-white text-xl">Esperando que el juego inicie...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar pantalla de espera mientras se espera a que todos respondan
+  if (transitionState === 'waiting_others' && waitingForOthers) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner mx-auto mb-4" />
+          <p className="text-white text-2xl mb-2">Esperando a que todos finalicen...</p>
+          <p className="text-white/80 text-xl">
+            {waitingForOthers.answeredCount}/{waitingForOthers.totalPlayers} jugadores han respondido
+          </p>
         </div>
       </div>
     );

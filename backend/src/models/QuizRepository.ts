@@ -75,6 +75,31 @@ export class QuizRepository {
   }
 
   /**
+   * Obtiene TODOS los quizzes (públicos y privados)
+   * @returns Lista de todos los quizzes (sin preguntas)
+   */
+  async getAllQuizzes(): Promise<Omit<Quiz, 'questions'>[]> {
+    try {
+      const result = await database.query(
+        'SELECT id, title, description, created_by, created_at, is_public FROM quizzes ORDER BY created_at DESC'
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+        isPublic: row.is_public,
+        questions: [],
+      }));
+    } catch (error) {
+      console.error('Error fetching all quizzes:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Obtiene todos los quizzes públicos
    * @returns Lista de quizzes públicos (sin preguntas)
    */

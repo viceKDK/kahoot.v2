@@ -114,11 +114,19 @@ export default function CreateGamePage() {
           animate={{ opacity: 1, y: 0 }}
         >
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-white mb-4">Crear Nueva Sala</h1>
-            <p className="text-xl text-white/80">
-              Selecciona un quiz y ingresa tu nombre
-            </p>
+          <div className="mb-8">
+            <button
+              onClick={() => router.push('/')}
+              className="text-white/80 hover:text-white mb-4"
+            >
+              ← Volver al Inicio
+            </button>
+            <div className="text-center">
+              <h1 className="text-5xl font-bold text-white mb-4">Crear Nueva Sala</h1>
+              <p className="text-xl text-white/80">
+                Selecciona un quiz y ingresa tu nombre
+              </p>
+            </div>
           </div>
 
           {/* Form */}

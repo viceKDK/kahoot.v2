@@ -10,6 +10,20 @@ import { Quiz } from '../../../shared/types';
 const router = Router();
 
 /**
+ * GET /api/quizzes
+ * Obtiene TODOS los quizzes (públicos y privados)
+ */
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const quizzes = await QuizRepository.getAllQuizzes();
+    return res.json({ success: true, data: quizzes });
+  } catch (error: any) {
+    console.error('Error fetching all quizzes:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * GET /api/quizzes/public
  * Obtiene todos los quizzes públicos
  */

@@ -8,7 +8,10 @@
       "Bash(claude mcp remove:*)",
       "Skill(frontend-design:frontend-design)",
       "Bash(ipconfig:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

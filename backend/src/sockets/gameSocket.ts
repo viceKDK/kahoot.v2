@@ -361,9 +361,8 @@ export class GameSocketHandler {
         selectedOptionId: lastAnswer.optionId,
       });
 
-      // 2. Después de 2 segundos, mostrar ranking actualizado
+      // 2. Después de 2 segundos, mostrar ranking al jugador
       setTimeout(() => {
-        console.log(`📊 Sending ranking to player ${playerId}`);
         const { ranking } = GameService.getRanking(code);
         const playerRank = ranking.find((e) => e.player.id === playerId);
 
@@ -373,18 +372,15 @@ export class GameSocketHandler {
           topPlayers: ranking.slice(0, 5),
         });
 
-        // 3. Después de 3 segundos, avanzar a la siguiente pregunta
+        // 3. Después de 3 segundos, avanzar a la siguiente pregunta para este jugador
         setTimeout(() => {
-          console.log(`⏭️ Advancing player ${playerId} to next question`);
           const hasMore = GameService.advancePlayerToNextQuestion(code, playerId);
 
           if (hasMore) {
-            console.log(`✅ Player ${playerId} has more questions, starting next one`);
-            // Iniciar siguiente pregunta para este jugador
+            // Iniciar siguiente pregunta
             this.startQuestionForPlayer(code, playerId);
           } else {
-            console.log(`🏁 Player ${playerId} finished all questions`);
-            // Jugador terminó su juego, mostrar pantalla final individual
+            // Jugador terminó
             this.showPlayerFinalScreen(code, playerId);
 
             // Verificar si todos terminaron para finalizar el juego global
@@ -413,6 +409,23 @@ export class GameSocketHandler {
       const playersInThisQuestion = game.players.filter((player) => {
         const state = game.playerStates[player.id];
         return state && state.currentQuestionIndex === questionIndex;
+      });
+
+      // Emitir a los que ya respondieron que estÃ¡n esperando al resto
+      const answeredCount = playersInThisQuestion.filter((player) => {
+        const state = game.playerStates[player.id];
+        return state && state.hasAnsweredCurrent;
+      }).length;
+      const totalPlayers = playersInThisQuestion.length;
+
+      playersInThisQuestion.forEach((player) => {
+        const state = game.playerStates[player.id];
+        if (!state || !state.hasAnsweredCurrent) return;
+
+        this.emitToPlayer(player.id, 'player:waiting_for_others', {
+          answeredCount,
+          totalPlayers,
+        });
       });
 
       // Verificar si todos los jugadores en esta pregunta han respondido
@@ -445,39 +458,24 @@ export class GameSocketHandler {
         });
       });
 
-      // 2. Después de 2 segundos, mostrar ranking a todos
+      // 2. Despues de 2 segundos, avanzar a todos a la siguiente pregunta (sin ranking intermedio)
       setTimeout(() => {
-        const { ranking } = GameService.getRanking(code);
-
         playersInThisQuestion.forEach((player) => {
-          const playerRank = ranking.find((e) => e.player.id === player.id);
+          const hasMore = GameService.advancePlayerToNextQuestion(code, player.id);
 
-          this.emitToPlayer(player.id, 'player:show_ranking', {
-            ranking,
-            currentPlayerRank: playerRank?.rank || 0,
-            topPlayers: ranking.slice(0, 5),
-          });
+          if (hasMore) {
+            // Iniciar siguiente pregunta
+            this.startQuestionForPlayer(code, player.id);
+          } else {
+            // Jugador termino
+            this.showPlayerFinalScreen(code, player.id);
+          }
         });
 
-        // 3. Después de 3 segundos, avanzar a todos a la siguiente pregunta
-        setTimeout(() => {
-          playersInThisQuestion.forEach((player) => {
-            const hasMore = GameService.advancePlayerToNextQuestion(code, player.id);
-
-            if (hasMore) {
-              // Iniciar siguiente pregunta
-              this.startQuestionForPlayer(code, player.id);
-            } else {
-              // Jugador terminó
-              this.showPlayerFinalScreen(code, player.id);
-            }
-          });
-
-          // Verificar si todos terminaron
-          if (GameService.haveAllPlayersFinished(code)) {
-            this.finishGame(code);
-          }
-        }, 3000); // Ranking por 3 segundos
+        // Verificar si todos terminaron
+        if (GameService.haveAllPlayersFinished(code)) {
+          this.finishGame(code);
+        }
       }, 2000); // Feedback por 2 segundos
     } catch (error) {
       console.error('Error handling wait-all mode advance:', error);
@@ -554,3 +552,5 @@ export class GameSocketHandler {
     }
   }
 }
+
+

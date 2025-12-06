@@ -5,7 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { SocketEvents } from '@/shared/types';
+import { SocketEvents, GameMode } from '@/shared/types';
 import { useGameStore } from '@/store/gameStore';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
@@ -17,6 +17,7 @@ let listenersRegistered = false;
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
   const {
+    game,
     setGame,
     setCurrentPlayer,
     setPlayerState,
@@ -28,6 +29,7 @@ export const useSocket = () => {
     setIsConnected,
     setTransitionState,
     setAnswerFeedback,
+    setWaitingForOthers,
     updateGameStatus,
     updatePlayers,
     currentPlayer,
@@ -145,6 +147,13 @@ export const useSocket = () => {
         updateGameStatus('QUESTION' as any);
       });
 
+      // Event: Jugador esperando a que otros terminen
+      socket.on('player:waiting_for_others', (payload: any) => {
+        console.log('Waiting for others:', payload);
+        setWaitingForOthers(payload);
+        setTransitionState('waiting_others');
+      });
+
       // Event: Feedback de respuesta (correcto/incorrecto)
       socket.on('player:answer_feedback', (payload: any) => {
         console.log('Answer feedback:', payload);
@@ -154,6 +163,11 @@ export const useSocket = () => {
 
       // Event: Mostrar ranking actualizado
       socket.on('player:show_ranking', (payload: any) => {
+        // En modo ESPERAR no mostramos ranking entre preguntas (solo al final)
+        if (game?.mode === GameMode.WAIT_ALL) {
+          console.log('Skip ranking view in WAIT_ALL mode (player:show_ranking ignored)');
+          return;
+        }
         console.log('Show ranking:', payload);
         setRanking(payload.ranking, payload.currentPlayerRank);
         setTransitionState('showing_ranking');
@@ -179,6 +193,7 @@ export const useSocket = () => {
       // noop
     };
   }, [
+    game,
     setGame,
     setCurrentPlayer,
     setPlayerState,
@@ -190,6 +205,7 @@ export const useSocket = () => {
     setIsConnected,
     setTransitionState,
     setAnswerFeedback,
+    setWaitingForOthers,
     updateGameStatus,
     updatePlayers,
   ]);
@@ -197,3 +213,7 @@ export const useSocket = () => {
   return socketRef.current;
 };
 
+// Función auxiliar para obtener el socket actual fuera del hook
+export const getCurrentSocket = (): Socket | null => {
+  return globalSocket;
+};

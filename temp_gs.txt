@@ -1,0 +1,130 @@
+            if (GameService.haveAllPlayersFinished(code)) {
+              this.finishGame(code);
+            }
+          }
+        }, 3000); // Ranking por 3 segundos
+      }, 2000); // Feedback por 2 segundos
+    } catch (error) {
+      console.error('Error handling fast mode advance:', error);
+    }
+  }
+
+  /**
+   * Maneja el avance en modo ESPERAR (colectivo por pregunta)
+   * @param code - Código del juego
+   * @param questionIndex - Índice de la pregunta
+   */
+  private handleWaitAllModeAdvance(code: string, questionIndex: number): void {
+    try {
+      const game = GameService.getGame(code);
+      if (!game) return;
+
+      // Obtener todos los jugadores en esta pregunta
+      const playersInThisQuestion = game.players.filter((player) => {
+        const state = game.playerStates[player.id];
+        return state && state.currentQuestionIndex === questionIndex;
+      });
+
+      // Emitir a los que ya respondieron que estÃ¡n esperando al resto
+      const answeredCount = playersInThisQuestion.filter((player) => {
+        const state = game.playerStates[player.id];
+        return state && state.hasAnsweredCurrent;
+      }).length;
+      const totalPlayers = playersInThisQuestion.length;
+
+      playersInThisQuestion.forEach((player) => {
+        const state = game.playerStates[player.id];
+        if (!state || !state.hasAnsweredCurrent) return;
+
+        this.emitToPlayer(player.id, 'player:waiting_for_others', {
+          answeredCount,
+          totalPlayers,
+        });
+      });
+
+      // Verificar si todos los jugadores en esta pregunta han respondido
+      const allAnswered = playersInThisQuestion.every((player) => {
+        const state = game.playerStates[player.id];
+        return state && state.hasAnsweredCurrent;
+      });
+
+      if (!allAnswered) {
+        // Aún hay jugadores sin responder, no hacer nada
+        return;
+      }
+
+      const currentQuestion = game.quiz.questions[questionIndex];
+      if (!currentQuestion) return;
+
+      // Todos respondieron, avanzar a todos juntos
+      // 1. Enviar feedback individual a cada jugador
+      playersInThisQuestion.forEach((player) => {
+        const playerState = game.playerStates[player.id];
+        if (!playerState) return;
+
+        const lastAnswer = playerState.answers[playerState.answers.length - 1];
+
+        this.emitToPlayer(player.id, 'player:answer_feedback', {
+          isCorrect: lastAnswer.isCorrect,
+          pointsEarned: lastAnswer.pointsEarned,
+          correctOptionId: currentQuestion.options.find((o) => o.isCorrect)?.id,
+          selectedOptionId: lastAnswer.optionId,
+        });
+      });
+
+      // 2. Después de 2 segundos, mostrar ranking a todos
+      setTimeout(() => {
+        const { ranking } = GameService.getRanking(code);
+
+        playersInThisQuestion.forEach((player) => {
+          const playerRank = ranking.find((e) => e.player.id === player.id);
+
+          this.emitToPlayer(player.id, 'player:show_ranking', {
+            ranking,
+            currentPlayerRank: playerRank?.rank || 0,
+            topPlayers: ranking.slice(0, 5),
+          });
+        });
+
+        // 3. Después de 3 segundos, avanzar a todos a la siguiente pregunta
+        setTimeout(() => {
+          playersInThisQuestion.forEach((player) => {
+            const hasMore = GameService.advancePlayerToNextQuestion(code, player.id);
+
+            if (hasMore) {
+              // Iniciar siguiente pregunta
+              this.startQuestionForPlayer(code, player.id);
+            } else {
+              // Jugador terminó
+              this.showPlayerFinalScreen(code, player.id);
+            }
+          });
+
+          // Verificar si todos terminaron
+          if (GameService.haveAllPlayersFinished(code)) {
+            this.finishGame(code);
+          }
+        }, 3000); // Ranking por 3 segundos
+      }, 2000); // Feedback por 2 segundos
+    } catch (error) {
+      console.error('Error handling wait-all mode advance:', error);
+    }
+  }
+
+  /**
+   * Muestra la pantalla final a un jugador individual
+   * @param code - Código del juego
+   * @param playerId - ID del jugador
+   */
+  private showPlayerFinalScreen(code: string, playerId: string): void {
+    try {
+      const game = GameService.getGame(code);
+      if (!game) return;
+
+      const { ranking } = GameService.getRanking(code);
+      const playerRankEntry = ranking.find((entry) => entry.player.id === playerId);
+      const player = game.players.find((p) => p.id === playerId);
+
+      if (!playerRankEntry || !player) return;
+
+      // Emitir evento UNICAST solo a este jugador

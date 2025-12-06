@@ -506,6 +506,16 @@ export class GameService {
 
     // Avanzar a la siguiente pregunta
     playerState.currentQuestionIndex++;
+
+    // Si no hay mÃ¡s preguntas, marcar como terminado de forma segura
+    if (!game.quiz.questions || playerState.currentQuestionIndex >= game.quiz.questions.length) {
+      playerState.status = 'FINISHED';
+      playerState.questionStartTime = undefined;
+      playerState.hasAnsweredCurrent = false;
+      playerState.lastActivityAt = Date.now();
+      return playerState;
+    }
+
     playerState.status = 'QUESTION';
     playerState.questionStartTime = Date.now();
     playerState.hasAnsweredCurrent = false;
@@ -614,9 +624,9 @@ export class GameService {
 
   /**
    * Avanza un jugador a la siguiente pregunta
-   * @param code - Código del juego
+   * @param code - Codigo del juego
    * @param playerId - ID del jugador
-   * @returns true si avanzó, false si ya terminó el juego
+   * @returns true si avanzo, false si ya termino el juego
    */
   advancePlayerToNextQuestion(code: string, playerId: string): boolean {
     const game = this.activeGames.get(code);
@@ -629,27 +639,26 @@ export class GameService {
       throw new Error('Player state not found');
     }
 
-    // Verificar si hay más preguntas
+    // Verificar si hay mas preguntas
     if (playerState.currentQuestionIndex + 1 >= game.quiz.questions.length) {
       playerState.status = 'FINISHED';
       return false;
     }
 
-    // Si hay más preguntas, iniciar la siguiente
-    this.startPlayerQuestion(code, playerId);
+    // Todavia hay preguntas; startQuestionForPlayer gestionara el avance y el emit
     return true;
   }
 
   /**
    * Verifica si un jugador ha terminado todas las preguntas
-   * @param code - Código del juego
+   * @param code - Codigo del juego
    * @param playerId - ID del jugador
-   * @returns true si terminó, false si aún tiene preguntas
+   * @returns true si termino, false si aun tiene preguntas
    */
   hasPlayerFinished(code: string, playerId: string): boolean {
     const playerState = this.getPlayerState(code, playerId);
     if (!playerState) return false;
-    return playerState.status === 'FINISHED';
+    return playerState.status == 'FINISHED';
   }
 
   /**
@@ -679,3 +688,5 @@ export class GameService {
 
 // Singleton
 export default new GameService();
+
+
