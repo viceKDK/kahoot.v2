@@ -11,6 +11,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { useGameStore } from '@/store/gameStore';
 import { SocketEvents, GameStatus } from '@/shared/types';
 import PlayerCard from '@/components/PlayerCard';
+import HostStatsTable from '@/components/HostStatsTable';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 
@@ -18,20 +19,13 @@ export default function HostLobbyPage() {
   const params = useParams();
   const router = useRouter();
   const socket = useSocket();
-  const { game, currentPlayer, isConnected } = useGameStore();
+  const { game, currentPlayer, gameStats, isConnected } = useGameStore();
 
   const code = params.code as string;
   const joinUrl =
     typeof window !== 'undefined'
       ? `${window.location.origin}/join/${code}`
       : '';
-
-  // Redirect cuando el juego inicia
-  useEffect(() => {
-    if (game?.status === GameStatus.PLAYING) {
-      router.push(`/game/${code}`);
-    }
-  }, [game?.status, code, router]);
 
   const handleStartGame = () => {
     if (!socket || !isConnected || !currentPlayer) {
@@ -61,6 +55,41 @@ export default function HostLobbyPage() {
     );
   }
 
+  // Si el juego está activo, mostrar estadísticas
+  if (game.status === GameStatus.PLAYING || game.status === GameStatus.FINISHED) {
+    return (
+      <div className="min-h-screen p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 text-center"
+          >
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Vista del Host - Panel de Control
+            </h1>
+            <p className="text-white/80 text-lg">{game.quiz.title}</p>
+            <p className="text-white/60 text-sm mt-2">Código: {code}</p>
+          </motion.div>
+
+          {gameStats ? (
+            <HostStatsTable
+              playerStats={gameStats.playerStats}
+              currentQuestionNumber={gameStats.currentQuestionIndex}
+              totalQuestions={gameStats.totalQuestions}
+            />
+          ) : (
+            <div className="card-white p-8 text-center">
+              <div className="spinner mx-auto mb-4" />
+              <p className="text-gray-600">Cargando estadísticas...</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Lobby (antes de iniciar)
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">

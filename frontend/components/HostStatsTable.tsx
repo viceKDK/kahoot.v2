@@ -44,7 +44,7 @@ export default function HostStatsTable({
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gradient-to-r from-primary to-secondary text-white">
+              <tr className="bg-primary text-white">
                 <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
                   Pos
                 </th>
@@ -89,7 +89,7 @@ export default function HostStatsTable({
                   >
                     {/* Posición */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary text-white font-bold">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold">
                         {index + 1}
                       </div>
                     </td>

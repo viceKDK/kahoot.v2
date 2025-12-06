@@ -57,15 +57,17 @@ io.on('connection', (socket) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || '3001', 10);
+const HOST = '0.0.0.0'; // Escuchar en todas las interfaces de red
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, HOST, () => {
   console.log(`
 ╔════════════════════════════════════════╗
 ║                                        ║
 ║       🎮 QuizArena Server 🎮          ║
 ║                                        ║
-║  Server running on port ${PORT}        ║
+║  Server: http://192.168.1.6:${PORT}     ║
+║  Local:  http://localhost:${PORT}       ║
 ║  Environment: ${process.env.NODE_ENV || 'development'}              ║
 ║                                        ║
 ╚════════════════════════════════════════╝

@@ -48,17 +48,26 @@ echo [*] Iniciando Frontend...
 start "QuizArena Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 
 :: ============================================================================
-:: Mensaje final
+:: Mensaje final y abrir navegador
 :: ============================================================================
 echo.
 echo ============================================================================
 echo                         QuizArena Iniciado!
 echo ============================================================================
 echo.
-echo   Backend:  http://localhost:3001  (o http://192.168.1.98:3001)
-echo   Frontend: http://localhost:3000  (o http://192.168.1.98:3000)
+echo   Backend:  http://localhost:3001  (o http://192.168.1.6:3001)
+echo   Frontend: http://localhost:3000  (o http://192.168.1.6:3000)
 echo.
 echo   Para cerrar, cierra las ventanas de terminal abiertas.
 echo ============================================================================
 echo.
+
+:: Esperar 3 segundos para que los servidores inicien
+echo [*] Esperando a que los servidores inicien...
+timeout /t 3 /nobreak >nul
+
+:: Abrir navegador con la URL
+echo [*] Abriendo navegador...
+start http://192.168.1.6:3000
+
 pause

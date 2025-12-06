@@ -5,7 +5,10 @@
       "Bash(npx:*)",
       "Bash(node --version:*)",
       "Bash(npm --version)",
-      "Bash(claude mcp remove:*)"
+      "Bash(claude mcp remove:*)",
+      "Skill(frontend-design:frontend-design)",
+      "Bash(ipconfig:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

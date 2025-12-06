@@ -29,23 +29,19 @@ export default function GamePage() {
     questionStartTime,
     questionResults,
     ranking,
+    currentPlayerRank,
     gameStats,
     finalData,
     hasAnswered,
     selectedOptionId,
+    transitionState,
+    answerFeedback,
     setHasAnswered,
     setSelectedOptionId,
     isConnected,
   } = useGameStore();
 
   const code = params.code as string;
-  const [showResults, setShowResults] = useState(false);
-  const [showRanking, setShowRanking] = useState(false);
-  const [showAnswerPopup, setShowAnswerPopup] = useState(false);
-  const [answerData, setAnswerData] = useState<{
-    isCorrect: boolean;
-    pointsEarned: number;
-  } | null>(null);
 
   // Verificar si el usuario actual es el host
   const isHost = currentPlayer?.isHost === true;
@@ -57,63 +53,51 @@ export default function GamePage() {
     }
   }, [finalData, code, router]);
 
-  // Mostrar pop-up de respuesta cuando llegan los resultados
-  useEffect(() => {
-    if (questionResults && currentPlayer) {
-      const playerAnswer = questionResults.playerAnswers.find(
-        (a) => a.playerId === currentPlayer.id
-      );
-
-      if (playerAnswer) {
-        setAnswerData({
-          isCorrect: playerAnswer.isCorrect,
-          pointsEarned: playerAnswer.pointsEarned,
-        });
-        setShowAnswerPopup(true);
-      }
-    }
-  }, [questionResults, currentPlayer]);
-
-  // Mostrar resultados cuando llegan
-  useEffect(() => {
-    if (questionResults) {
-      // Esperar a que el pop-up termine antes de mostrar resultados
-      setTimeout(() => {
-        setShowResults(true);
-        setTimeout(() => {
-          setShowResults(false);
-        }, 5000);
-      }, 2500);
-    }
-  }, [questionResults]);
-
-  // Mostrar ranking cuando llega
-  useEffect(() => {
-    if (ranking) {
-      setShowRanking(true);
-      setTimeout(() => {
-        setShowRanking(false);
-      }, 5000);
-    }
-  }, [ranking]);
-
   const handleAnswerSelect = (optionId: string) => {
-    if (!socket || !isConnected || hasAnswered || !currentQuestion || !currentPlayer) {
+    console.log('🎯 handleAnswerSelect called with optionId:', optionId);
+    console.log('   socket:', socket ? 'Connected' : 'Not connected');
+    console.log('   isConnected:', isConnected);
+    console.log('   hasAnswered:', hasAnswered);
+    console.log('   currentQuestion:', currentQuestion?.id);
+    console.log('   currentPlayer:', currentPlayer?.id);
+
+    if (!socket) {
+      console.error('❌ No socket available');
+      return;
+    }
+    if (!isConnected) {
+      console.error('❌ Socket not connected');
+      return;
+    }
+    if (hasAnswered) {
+      console.error('❌ Already answered');
+      return;
+    }
+    if (!currentQuestion) {
+      console.error('❌ No current question');
+      return;
+    }
+    if (!currentPlayer) {
+      console.error('❌ No current player');
       return;
     }
 
     const timeElapsed = Date.now() - (questionStartTime || 0);
+    console.log('⏱️ Time elapsed:', timeElapsed, 'ms');
 
     setSelectedOptionId(optionId);
     setHasAnswered(true);
 
-    socket.emit(SocketEvents.PLAYER_SUBMIT_ANSWER, {
+    const payload = {
       gameId: code,
       playerId: currentPlayer.id,
       questionId: currentQuestion.id,
       optionId,
       timeElapsed,
-    });
+    };
+
+    console.log('📤 Emitting PLAYER_SUBMIT_ANSWER:', payload);
+    socket.emit(SocketEvents.PLAYER_SUBMIT_ANSWER, payload);
   };
 
   // Waiting for game to start
@@ -128,8 +112,57 @@ export default function GamePage() {
     );
   }
 
+  // Mostrar feedback de respuesta
+  if (transitionState === 'showing_feedback' && answerFeedback) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', duration: 0.5 }}
+          className="text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            className={`text-9xl mb-6 ${
+              answerFeedback.isCorrect ? 'animate-bounce' : 'animate-pulse'
+            }`}
+          >
+            {answerFeedback.isCorrect ? '✅' : '❌'}
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className={`text-6xl font-black mb-4 ${
+              answerFeedback.isCorrect ? 'text-green-400' : 'text-red-400'
+            }`}
+          >
+            {answerFeedback.isCorrect ? '¡Correcto!' : 'Incorrecto'}
+          </motion.h1>
+
+          {answerFeedback.isCorrect && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, type: 'spring' }}
+              className="bg-white/90 backdrop-blur-sm rounded-3xl px-12 py-6 shadow-2xl inline-block"
+            >
+              <p className="text-4xl font-black text-primary">
+                +{answerFeedback.pointsEarned} puntos
+              </p>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
+
   // Mostrar ranking
-  if (showRanking && ranking) {
+  if (transitionState === 'showing_ranking' && ranking) {
     // Host siempre ve estadísticas
     if (isHost) {
       return (
@@ -173,6 +206,18 @@ export default function GamePage() {
             <h1 className="text-5xl font-bold text-white text-center mb-8">
               🏆 Rankings en Vivo
             </h1>
+            {currentPlayerRank && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
+                className="inline-block bg-white/90 backdrop-blur-sm rounded-full px-8 py-3 shadow-xl mb-6"
+              >
+                <p className="text-2xl font-black text-primary">
+                  Tu posición: #{currentPlayerRank}
+                </p>
+              </motion.div>
+            )}
             <RankingList
               ranking={ranking}
               showTop={5}
@@ -185,8 +230,8 @@ export default function GamePage() {
     );
   }
 
-  // Mostrar resultados de la pregunta
-  if (showResults && questionResults && currentQuestion) {
+  // Mostrar resultados de la pregunta (LEGACY - puede removerse si no se usa)
+  if (false && questionResults && currentQuestion) {
     // Host siempre ve estadísticas
     if (isHost) {
       return (
@@ -455,38 +500,16 @@ export default function GamePage() {
             )}
           </div>
         </div>
-
-        {/* Answer Popup */}
-        {answerData && (
-          <AnswerPopup
-            isCorrect={answerData.isCorrect}
-            pointsEarned={answerData.pointsEarned}
-            show={showAnswerPopup}
-            onComplete={() => setShowAnswerPopup(false)}
-          />
-        )}
       </>
     );
   }
 
   return (
-    <>
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="spinner mx-auto mb-4" />
-          <p className="text-white text-xl">Cargando...</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="spinner mx-auto mb-4" />
+        <p className="text-white text-xl">Cargando...</p>
       </div>
-
-      {/* Answer Popup */}
-      {answerData && (
-        <AnswerPopup
-          isCorrect={answerData.isCorrect}
-          pointsEarned={answerData.pointsEarned}
-          show={showAnswerPopup}
-          onComplete={() => setShowAnswerPopup(false)}
-        />
-      )}
-    </>
+    </div>
   );
 }

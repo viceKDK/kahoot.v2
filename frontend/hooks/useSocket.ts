@@ -19,14 +19,18 @@ export const useSocket = () => {
   const {
     setGame,
     setCurrentPlayer,
+    setPlayerState,
     setCurrentQuestion,
     setQuestionResults,
     setRanking,
     setGameStats,
     setFinalData,
     setIsConnected,
+    setTransitionState,
+    setAnswerFeedback,
     updateGameStatus,
     updatePlayers,
+    currentPlayer,
   } = useGameStore();
 
   useEffect(() => {
@@ -75,6 +79,7 @@ export const useSocket = () => {
       socket.on(SocketEvents.PLAYER_JOINED, (response) => {
         console.log('Joined game:', response);
         setGame(response.game);
+        setCurrentPlayer(response.player); // ¡Crítico! Establecer el jugador actual
       });
 
       // Event: Juego actualizado (nuevo jugador se unió)
@@ -120,11 +125,46 @@ export const useSocket = () => {
         setGameStats(payload);
       });
 
-      // Event: Juego finalizado
+      // Event: Juego finalizado (LEGACY - mantener por compatibilidad)
       socket.on(SocketEvents.GAME_FINISHED, (payload) => {
         console.log('Game finished:', payload);
         setFinalData(payload);
         updateGameStatus('FINISHED' as any);
+      });
+
+      // ======================================================================
+      // NUEVOS EVENTOS POR JUGADOR (UNICAST - ya filtrados por el servidor)
+      // ======================================================================
+
+      // Event: Pregunta individual iniciada
+      socket.on(SocketEvents.PLAYER_QUESTION_START, (payload: any) => {
+        console.log('Player question started:', payload);
+        setPlayerState(payload.playerState);
+        setCurrentQuestion(payload.question, payload.startTime);
+        setTransitionState('idle');
+        updateGameStatus('QUESTION' as any);
+      });
+
+      // Event: Feedback de respuesta (correcto/incorrecto)
+      socket.on('player:answer_feedback', (payload: any) => {
+        console.log('Answer feedback:', payload);
+        setAnswerFeedback(payload);
+        setTransitionState('showing_feedback');
+      });
+
+      // Event: Mostrar ranking actualizado
+      socket.on('player:show_ranking', (payload: any) => {
+        console.log('Show ranking:', payload);
+        setRanking(payload.ranking, payload.currentPlayerRank);
+        setTransitionState('showing_ranking');
+      });
+
+      // Event: Juego terminado individual
+      socket.on(SocketEvents.PLAYER_GAME_FINISHED, (payload: any) => {
+        console.log('Player game finished:', payload);
+        setFinalData(payload);
+        updateGameStatus('FINISHED' as any);
+        setTransitionState('idle');
       });
 
       // Event: Error
@@ -141,12 +181,15 @@ export const useSocket = () => {
   }, [
     setGame,
     setCurrentPlayer,
+    setPlayerState,
     setCurrentQuestion,
     setQuestionResults,
     setRanking,
     setGameStats,
     setFinalData,
     setIsConnected,
+    setTransitionState,
+    setAnswerFeedback,
     updateGameStatus,
     updatePlayers,
   ]);

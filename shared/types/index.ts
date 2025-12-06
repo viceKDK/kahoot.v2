@@ -43,6 +43,17 @@ export interface Player {
   joinedAt: Date;
 }
 
+// Estado de juego individual por jugador
+export interface PlayerGameState {
+  playerId: string;
+  currentQuestionIndex: number; // Índice de pregunta actual de este jugador
+  status: 'QUESTION' | 'WAITING_RESULTS' | 'FINISHED'; // Estado individual del jugador
+  questionStartTime?: number; // Timestamp de inicio de su pregunta actual
+  hasAnsweredCurrent: boolean; // Si ya respondió la pregunta actual
+  answers: PlayerAnswer[]; // Historial de respuestas de este jugador
+  lastActivityAt: number; // Para detectar jugadores inactivos
+}
+
 export interface QuestionOption {
   id: string;
   text: string;
@@ -92,11 +103,12 @@ export interface Game {
   quiz: Quiz;
   hostId: string;
   hostName: string;
-  status: GameStatus;
+  status: GameStatus; // Estado general del juego (LOBBY, PLAYING, FINISHED)
   mode: GameMode;
   players: Player[];
-  currentQuestionIndex: number;
-  questionStartTime?: number;
+  playerStates: Record<string, PlayerGameState>; // Estados individuales por playerId
+  currentQuestionIndex: number; // DEPRECATED: Solo para compatibilidad temporal
+  questionStartTime?: number; // DEPRECATED: Solo para compatibilidad temporal
   results: QuestionResults[];
   createdAt: Date;
   finishedAt?: Date;
@@ -123,20 +135,29 @@ export namespace SocketEvents {
   export const PLAYER_JOIN_GAME = 'player:join_game';
   export const PLAYER_LEAVE_GAME = 'player:leave_game';
   export const PLAYER_SUBMIT_ANSWER = 'player:submit_answer';
+  export const PLAYER_READY_NEXT = 'player:ready_next'; // Jugador listo para siguiente pregunta
 
-  // Game Events (Server -> Clients)
+  // Game Events (Server -> Clients) - LEGACY (se emiten a toda la sala)
   export const GAME_CREATED = 'game:created';
   export const GAME_UPDATED = 'game:updated';
   export const GAME_STARTED = 'game:started';
-  export const GAME_QUESTION_START = 'game:question_start';
-  export const GAME_QUESTION_END = 'game:question_end';
-  export const GAME_SHOW_RESULTS = 'game:show_results';
-  export const GAME_SHOW_RANKING = 'game:show_ranking';
+  export const GAME_QUESTION_START = 'game:question_start'; // DEPRECATED: usar PLAYER_QUESTION_START
+  export const GAME_QUESTION_END = 'game:question_end'; // DEPRECATED: usar PLAYER_QUESTION_END
+  export const GAME_SHOW_RESULTS = 'game:show_results'; // DEPRECATED: usar PLAYER_SHOW_RESULTS
+  export const GAME_SHOW_RANKING = 'game:show_ranking'; // DEPRECATED: usar PLAYER_SHOW_RANKING
   export const GAME_STATS_UPDATE = 'game:stats_update';
-  export const GAME_FINISHED = 'game:finished';
+  export const GAME_FINISHED = 'game:finished'; // DEPRECATED: usar PLAYER_GAME_FINISHED
   export const PLAYER_JOINED = 'player:joined';
   export const PLAYER_LEFT = 'player:left';
   export const ERROR = 'error';
+
+  // Player-Specific Events (Server -> Individual Player)
+  export const PLAYER_QUESTION_START = 'player:question_start'; // Pregunta individual
+  export const PLAYER_QUESTION_END = 'player:question_end'; // Fin de pregunta individual
+  export const PLAYER_SHOW_RESULTS = 'player:show_results'; // Resultados individuales
+  export const PLAYER_SHOW_RANKING = 'player:show_ranking'; // Ranking individual
+  export const PLAYER_GAME_FINISHED = 'player:game_finished'; // Fin de juego individual
+  export const PLAYER_STATE_UPDATE = 'player:state_update'; // Actualización de estado individual
 }
 
 // ============================================================================
@@ -224,6 +245,49 @@ export interface GameStatsPayload {
   currentQuestionIndex: number;
   totalQuestions: number;
   playerStats: PlayerStats[];
+}
+
+// Payloads para eventos individuales de jugador
+export interface PlayerStateUpdatePayload {
+  playerState: PlayerGameState;
+  player: Player; // Incluye info actualizada del jugador (score, etc.)
+}
+
+export interface PlayerQuestionStartPayload {
+  question: Question;
+  questionNumber: number;
+  totalQuestions: number;
+  startTime: number;
+  playerState: PlayerGameState;
+}
+
+export interface PlayerQuestionEndPayload {
+  questionId: string;
+  correctOptionId: string;
+  playerAnswer?: PlayerAnswer; // La respuesta de este jugador
+}
+
+export interface PlayerShowResultsPayload {
+  questionResults: QuestionResults; // Resultados globales
+  question: Question;
+  playerAnswer?: PlayerAnswer; // Respuesta de este jugador
+}
+
+export interface PlayerShowRankingPayload {
+  ranking: RankingEntry[];
+  currentPlayerRank: number; // Posición de este jugador
+  topPlayers: RankingEntry[];
+}
+
+export interface PlayerGameFinishedPayload {
+  finalRanking: RankingEntry[];
+  playerRank: number; // Posición final de este jugador
+  playerScore: number;
+  podium: RankingEntry[];
+  questionHistory: {
+    question: Question;
+    results: QuestionResults;
+  }[];
 }
 
 // ============================================================================

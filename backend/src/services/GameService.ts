@@ -8,6 +8,7 @@ import {
   Game,
   Player,
   PlayerAnswer,
+  PlayerGameState,
   QuestionResults,
   RankingEntry,
   GameStatus,
@@ -65,7 +66,8 @@ export class GameService {
       status: GameStatus.LOBBY,
       mode,
       players: [],
-      currentQuestionIndex: -1,
+      playerStates: {}, // Estados individuales por jugador
+      currentQuestionIndex: -1, // DEPRECATED: mantener por compatibilidad
       results: [],
       createdAt: new Date(),
     };
@@ -149,7 +151,19 @@ export class GameService {
     }
 
     game.status = GameStatus.PLAYING;
-    game.currentQuestionIndex = 0;
+    game.currentQuestionIndex = 0; // DEPRECATED: mantener por compatibilidad
+
+    // Inicializar estado individual para cada jugador
+    game.players.forEach((player) => {
+      game.playerStates[player.id] = {
+        playerId: player.id,
+        currentQuestionIndex: -1, // Aún no ha empezado ninguna pregunta
+        status: 'WAITING_RESULTS', // Esperando que inicie la primera pregunta
+        hasAnsweredCurrent: false,
+        answers: [],
+        lastActivityAt: Date.now(),
+      };
+    });
 
     // Actualizar en BD
     await GameSessionRepository.updateSessionStatus(
@@ -455,6 +469,201 @@ export class GameService {
       totalQuestions: game.quiz.questions.length,
       playerStats,
     };
+  }
+
+  // ============================================================================
+  // MÉTODOS PARA ESTADO POR JUGADOR
+  // ============================================================================
+
+  /**
+   * Obtiene el estado de un jugador específico
+   * @param code - Código del juego
+   * @param playerId - ID del jugador
+   * @returns Estado del jugador o null
+   */
+  getPlayerState(code: string, playerId: string): PlayerGameState | null {
+    const game = this.activeGames.get(code);
+    if (!game) return null;
+    return game.playerStates[playerId] || null;
+  }
+
+  /**
+   * Inicia una pregunta para un jugador específico
+   * @param code - Código del juego
+   * @param playerId - ID del jugador
+   * @returns Estado actualizado del jugador
+   */
+  startPlayerQuestion(code: string, playerId: string): PlayerGameState {
+    const game = this.activeGames.get(code);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    const playerState = game.playerStates[playerId];
+    if (!playerState) {
+      throw new Error('Player state not found');
+    }
+
+    // Avanzar a la siguiente pregunta
+    playerState.currentQuestionIndex++;
+    playerState.status = 'QUESTION';
+    playerState.questionStartTime = Date.now();
+    playerState.hasAnsweredCurrent = false;
+    playerState.lastActivityAt = Date.now();
+
+    return playerState;
+  }
+
+  /**
+   * Registra la respuesta de un jugador (versión nueva con estado individual)
+   * @param code - Código del juego
+   * @param playerId - ID del jugador
+   * @param optionId - Opción elegida
+   * @param timeElapsed - Tiempo transcurrido
+   * @returns Respuesta y estado actualizado del jugador
+   */
+  submitPlayerAnswer(
+    code: string,
+    playerId: string,
+    optionId: string,
+    timeElapsed: number
+  ): { answer: PlayerAnswer; playerState: PlayerGameState } {
+    const game = this.activeGames.get(code);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    const playerState = game.playerStates[playerId];
+    if (!playerState) {
+      throw new Error('Player state not found');
+    }
+
+    const currentQuestion = game.quiz.questions[playerState.currentQuestionIndex];
+    if (!currentQuestion) {
+      throw new Error('No current question for this player');
+    }
+
+    const player = game.players.find((p) => p.id === playerId);
+    if (!player) {
+      throw new Error('Player not found');
+    }
+
+    const selectedOption = currentQuestion.options.find((o) => o.id === optionId);
+    if (!selectedOption) {
+      throw new Error('Option not found');
+    }
+
+    const isCorrect = selectedOption.isCorrect;
+    const pointsEarned = isCorrect
+      ? ScoringService.calculatePoints(
+          currentQuestion.timeLimit,
+          timeElapsed,
+          player.streak
+        )
+      : 0;
+
+    // Actualizar estadísticas del jugador
+    player.totalAnswers += 1;
+    if (isCorrect) {
+      player.correctAnswers += 1;
+      player.score += pointsEarned;
+    }
+    player.streak = ScoringService.updateStreak(player.streak, isCorrect);
+    player.accuracy = ScoringService.calculateAccuracy(
+      player.correctAnswers,
+      player.totalAnswers
+    );
+
+    // Crear respuesta
+    const answer: PlayerAnswer = {
+      playerId,
+      questionId: currentQuestion.id,
+      optionId,
+      answeredAt: Date.now(),
+      timeElapsed,
+      isCorrect,
+      pointsEarned,
+    };
+
+    // Guardar en estado del jugador
+    playerState.answers.push(answer);
+    playerState.hasAnsweredCurrent = true;
+    playerState.status = 'WAITING_RESULTS';
+    playerState.lastActivityAt = Date.now();
+
+    // También guardar en resultados globales (para estadísticas)
+    if (!game.results[playerState.currentQuestionIndex]) {
+      game.results[playerState.currentQuestionIndex] = {
+        questionId: currentQuestion.id,
+        totalPlayers: game.players.length,
+        optionVotes: {},
+        correctOptionId: currentQuestion.options.find((o) => o.isCorrect)!.id,
+        playerAnswers: [],
+      };
+    }
+
+    const questionResults = game.results[playerState.currentQuestionIndex];
+    questionResults.playerAnswers.push(answer);
+
+    // Actualizar votos
+    const votes = questionResults.optionVotes;
+    votes[optionId] = (votes[optionId] || 0) + 1;
+
+    return { answer, playerState };
+  }
+
+  /**
+   * Avanza un jugador a la siguiente pregunta
+   * @param code - Código del juego
+   * @param playerId - ID del jugador
+   * @returns true si avanzó, false si ya terminó el juego
+   */
+  advancePlayerToNextQuestion(code: string, playerId: string): boolean {
+    const game = this.activeGames.get(code);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    const playerState = game.playerStates[playerId];
+    if (!playerState) {
+      throw new Error('Player state not found');
+    }
+
+    // Verificar si hay más preguntas
+    if (playerState.currentQuestionIndex + 1 >= game.quiz.questions.length) {
+      playerState.status = 'FINISHED';
+      return false;
+    }
+
+    // Si hay más preguntas, iniciar la siguiente
+    this.startPlayerQuestion(code, playerId);
+    return true;
+  }
+
+  /**
+   * Verifica si un jugador ha terminado todas las preguntas
+   * @param code - Código del juego
+   * @param playerId - ID del jugador
+   * @returns true si terminó, false si aún tiene preguntas
+   */
+  hasPlayerFinished(code: string, playerId: string): boolean {
+    const playerState = this.getPlayerState(code, playerId);
+    if (!playerState) return false;
+    return playerState.status === 'FINISHED';
+  }
+
+  /**
+   * Verifica si todos los jugadores han terminado el juego
+   * @param code - Código del juego
+   * @returns true si todos terminaron
+   */
+  haveAllPlayersFinished(code: string): boolean {
+    const game = this.activeGames.get(code);
+    if (!game) return false;
+
+    return game.players.every((player) =>
+      this.hasPlayerFinished(code, player.id)
+    );
   }
 
   /**
