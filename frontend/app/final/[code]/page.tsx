@@ -82,13 +82,13 @@ export default function FinalPage() {
                 onClick={() => setShowHistory(true)}
                 className="btn-secondary px-8 py-4 text-xl"
               >
-                📊 Ver Historial de Preguntas
+                 Ver Historial de Preguntas
               </button>
               <button
                 onClick={handlePlayAgain}
                 className="btn-primary px-8 py-4 text-xl"
               >
-                🔄 Jugar de Nuevo
+                 Jugar de Nuevo
               </button>
             </motion.div>
           </>
@@ -107,7 +107,7 @@ export default function FinalPage() {
               </button>
 
               <h1 className="text-5xl font-bold text-white text-center mb-8">
-                📊 Historial de Preguntas
+                 Historial de Preguntas
               </h1>
 
               <div className="space-y-6">
@@ -168,7 +168,7 @@ export default function FinalPage() {
 
               <div className="mt-8 flex justify-center">
                 <button onClick={handlePlayAgain} className="btn-primary px-8 py-4 text-xl">
-                  🔄 Jugar de Nuevo
+                   Jugar de Nuevo
                 </button>
               </div>
             </motion.div>

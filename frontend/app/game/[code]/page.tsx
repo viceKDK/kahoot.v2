@@ -47,6 +47,19 @@ export default function GamePage() {
 
   // Verificar si el usuario actual es el host
   const isHost = currentPlayer?.isHost === true;
+  const showReturnHome = game?.status === GameStatus.FINISHED || !!finalData;
+
+  const renderReturnHomeButton = () => {
+    if (!showReturnHome) return null;
+    return (
+      <button
+        onClick={() => router.push('/')}
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-white text-primary font-bold px-5 py-2 shadow-lg hover:-translate-y-0.5 transition-transform"
+      >
+        ← Volver al inicio
+      </button>
+    );
+  };
 
   // Redirect si el juego terminó
   useEffect(() => {
@@ -195,6 +208,7 @@ export default function GamePage() {
                 Vista del Host - Panel de Control
               </h1>
               <p className="text-white/80 text-lg">{game?.quiz.title}</p>
+              {renderReturnHomeButton()}
             </motion.div>
 
             {gameStats ? (
@@ -264,6 +278,7 @@ export default function GamePage() {
                 Vista del Host - Panel de Control
               </h1>
               <p className="text-white/80 text-lg">{game?.quiz.title}</p>
+              {renderReturnHomeButton()}
             </motion.div>
 
             {gameStats ? (
@@ -394,6 +409,7 @@ export default function GamePage() {
                 Vista del Host - Panel de Control
               </h1>
               <p className="text-white/80 text-lg">{game.quiz.title}</p>
+              {renderReturnHomeButton()}
             </motion.div>
 
             {gameStats ? (

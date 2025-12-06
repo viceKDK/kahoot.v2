@@ -133,7 +133,6 @@ export default function HomePage() {
           transition={{ delay: 0.5 }}
           className="text-center text-white/60 text-sm"
         >
-          <p>Creado con ❤️ usando Next.js + Socket.IO</p>
         </motion.div>
       </motion.div>
     </div>
