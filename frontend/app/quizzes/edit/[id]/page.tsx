@@ -12,6 +12,9 @@ import { UserStorage } from '@/lib/userStorage';
 import QuestionEditor from '@/components/QuestionEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// HARDCODED - Cambia esta IP a tu IP WiFi
+const BACKEND_URL = 'http://192.168.1.20:3001';
+
 export default function EditQuizPage() {
   const params = useParams();
   const router = useRouter();
@@ -33,7 +36,7 @@ export default function EditQuizPage() {
   const fetchQuiz = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/${quizId}`
+        `${BACKEND_URL}/api/quizzes/${quizId}`
       );
       const result = await response.json();
 
@@ -115,7 +118,7 @@ export default function EditQuizPage() {
       setSaving(true);
 
       // Primero eliminar el quiz anterior
-      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/${quizId}`, {
+      await fetch(`${BACKEND_URL}/api/quizzes/${quizId}`, {
         method: 'DELETE',
       });
 
@@ -129,7 +132,7 @@ export default function EditQuizPage() {
         questions,
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes`, {
+      const response = await fetch(`${BACKEND_URL}/api/quizzes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

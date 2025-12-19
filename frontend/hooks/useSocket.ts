@@ -8,7 +8,8 @@ import { io, Socket } from 'socket.io-client';
 import { SocketEvents, GameMode } from '@/shared/types';
 import { useGameStore } from '@/store/gameStore';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+// HARDCODED - Cambia esta IP a tu IP WiFi
+const BACKEND_URL = 'http://192.168.1.20:3001';
 
 // Socket global por pestaña para no perder eventos al cambiar de página
 let globalSocket: Socket | null = null;
@@ -37,6 +38,8 @@ export const useSocket = () => {
 
   useEffect(() => {
     if (!globalSocket) {
+      console.log('🔌 Conectando a backend:', BACKEND_URL);
+
       globalSocket = io(BACKEND_URL, {
         transports: ['websocket', 'polling'],
         reconnectionDelay: 1000,
@@ -163,9 +166,9 @@ export const useSocket = () => {
 
       // Event: Mostrar ranking actualizado
       socket.on('player:show_ranking', (payload: any) => {
-        // En modo ESPERAR no mostramos ranking entre preguntas (solo al final)
-        if (game?.mode === GameMode.WAIT_ALL) {
-          console.log('Skip ranking view in WAIT_ALL mode (player:show_ranking ignored)');
+        // En modo RÁPIDO no mostramos ranking entre preguntas (solo al final)
+        if (game?.mode === GameMode.FAST) {
+          console.log('Skip ranking view in FAST mode (player:show_ranking ignored)');
           return;
         }
         console.log('Show ranking:', payload);

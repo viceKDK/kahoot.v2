@@ -12,8 +12,8 @@ export enum GameStatus {
 }
 
 export enum GameMode {
-  FAST = 'FAST',       // Solo espera por tiempo
-  WAIT_ALL = 'WAIT_ALL' // Termina antes si todos responden
+  FAST = 'FAST',       // Cada jugador avanza a su propio ritmo
+  WAIT_ALL = 'WAIT_ALL' // Todos los jugadores avanzan juntos (esperan a que todos respondan)
 }
 
 export enum PlayerStatus {

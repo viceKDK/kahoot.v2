@@ -1,73 +1,61 @@
 @echo off
-chcp 65001 >nul
 title QuizArena - Iniciando...
+
+:: ============================================================================
+:: CONFIGURACION - CAMBIA AQUI TU IP
+:: ============================================================================
+set LOCAL_IP=192.168.1.20
 
 echo ============================================================================
 echo                      QuizArena - Script de Inicio
 echo ============================================================================
 echo.
+echo [*] IP configurada: %LOCAL_IP%
+echo.
+echo Si esta NO es tu IP WiFi, editala en start.bat linea 7
+echo.
+pause
 
 cd /d "%~dp0"
 
-:: ============================================================================
-:: Matar procesos que ocupan los puertos 3000 y 3001
-:: ============================================================================
-echo [*] Verificando puertos en uso...
-
-:: Matar proceso en puerto 3000 (Frontend)
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 ^| findstr LISTENING 2^>nul') do (
-    if not "%%a"=="" (
-        echo [!] Puerto 3000 en uso ^(PID: %%a^). Matando proceso...
-        taskkill /F /PID %%a >nul 2>&1
-        echo [OK] Proceso en puerto 3000 terminado
-    )
-)
-
-:: Matar proceso en puerto 3001 (Backend)
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001 ^| findstr LISTENING 2^>nul') do (
-    if not "%%a"=="" (
-        echo [!] Puerto 3001 en uso ^(PID: %%a^). Matando proceso...
-        taskkill /F /PID %%a >nul 2>&1
-        echo [OK] Proceso en puerto 3001 terminado
-    )
-)
-
-echo [OK] Puertos verificados
+:: Matar procesos en puertos
+echo [*] Liberando puertos...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000"') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3001"') do taskkill /F /PID %%a >nul 2>&1
+echo [OK] Puertos liberados
 echo.
 
-:: ============================================================================
-:: Iniciar Backend y Frontend
-:: ============================================================================
-echo [*] Iniciando Backend...
-start "QuizArena Backend" cmd /k "cd /d "%~dp0backend" && npm run dev"
+:: Configurar .env.local
+echo [*] Configurando frontend...
+echo NEXT_PUBLIC_BACKEND_URL=http://%LOCAL_IP%:3001> frontend\.env.local
+echo [OK] Frontend configurado con: http://%LOCAL_IP%:3001
+echo.
 
-:: Esperar 2 segundos antes de iniciar frontend
+:: Iniciar Backend
+echo [*] Iniciando Backend...
+start "Backend - http://%LOCAL_IP%:3001" cmd /k "cd backend && set SERVER_IP=%LOCAL_IP% && npm run dev"
+
 timeout /t 2 /nobreak >nul
 
+:: Iniciar Frontend
 echo [*] Iniciando Frontend...
-start "QuizArena Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
+start "Frontend - http://%LOCAL_IP%:3000" cmd /k "cd frontend && npm run dev"
 
-:: ============================================================================
-:: Mensaje final y abrir navegador
-:: ============================================================================
 echo.
 echo ============================================================================
 echo                         QuizArena Iniciado!
 echo ============================================================================
 echo.
-echo   Backend:  http://localhost:3001  (o http://192.168.1.6:3001)
-echo   Frontend: http://localhost:3000  (o http://192.168.1.6:3000)
+echo   Backend:  http://%LOCAL_IP%:3001
+echo   Frontend: http://%LOCAL_IP%:3000
 echo.
-echo   Para cerrar, cierra las ventanas de terminal abiertas.
+echo   El QR generara: http://%LOCAL_IP%:3000/join/CODIGO
+echo.
 echo ============================================================================
 echo.
 
-:: Esperar 3 segundos para que los servidores inicien
-echo [*] Esperando a que los servidores inicien...
 timeout /t 3 /nobreak >nul
+start http://%LOCAL_IP%:3000
 
-:: Abrir navegador con la URL
-echo [*] Abriendo navegador...
-start http://192.168.1.6:3000
-
-pause
+echo Presiona cualquier tecla para cerrar esta ventana...
+pause >nul

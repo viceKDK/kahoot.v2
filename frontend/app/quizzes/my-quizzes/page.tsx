@@ -11,6 +11,9 @@ import { Quiz } from '@/shared/types';
 import { UserStorage } from '@/lib/userStorage';
 import { motion } from 'framer-motion';
 
+// HARDCODED - Cambia esta IP a tu IP WiFi
+const BACKEND_URL = 'http://192.168.1.20:3001';
+
 export default function MyQuizzesPage() {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -30,11 +33,11 @@ export default function MyQuizzesPage() {
       let endpoint;
       if (showAll) {
         // Obtener TODOS los quizzes
-        endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes`;
+        endpoint = `${BACKEND_URL}/api/quizzes`;
       } else {
         // Obtener solo mis quizzes
         const userId = UserStorage.getUserId();
-        endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/creator/${userId}`;
+        endpoint = `${BACKEND_URL}/api/quizzes/creator/${userId}`;
       }
 
       const response = await fetch(endpoint);
@@ -57,7 +60,7 @@ export default function MyQuizzesPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/${quizId}`,
+        `${BACKEND_URL}/api/quizzes/${quizId}`,
         { method: 'DELETE' }
       );
 
@@ -81,7 +84,7 @@ export default function MyQuizzesPage() {
 
       // Fetch full quiz with questions
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/${quiz.id}`
+        `${BACKEND_URL}/api/quizzes/${quiz.id}`
       );
       const result = await response.json();
 
@@ -102,7 +105,7 @@ export default function MyQuizzesPage() {
       };
 
       const createResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes`,
+        `${BACKEND_URL}/api/quizzes`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

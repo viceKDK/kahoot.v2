@@ -13,6 +13,9 @@ import { SocketEvents, Quiz, GameMode } from '@/shared/types';
 import { UserStorage } from '@/lib/userStorage';
 import { motion } from 'framer-motion';
 
+// HARDCODED - Cambia esta IP a tu IP WiFi
+const BACKEND_URL = 'http://192.168.1.20:3001';
+
 export default function CreateGamePage() {
   const router = useRouter();
   const socket = useSocket();
@@ -49,8 +52,8 @@ export default function CreateGamePage() {
 
       // Fetch both public and user's quizzes
       const [publicResponse, userResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/public`),
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/quizzes/creator/${userId}`)
+        fetch(`${BACKEND_URL}/api/quizzes/public`),
+        fetch(`${BACKEND_URL}/api/quizzes/creator/${userId}`)
       ]);
 
       const publicData = await publicResponse.json();
@@ -162,7 +165,7 @@ export default function CreateGamePage() {
                         : 'border-gray-300 text-gray-700'
                     }`}
                   >
-                    Rápido (avanza cuando todos responden)
+                    Rápido (cada uno a su ritmo)
                   </button>
                   <button
                     type="button"
@@ -173,7 +176,7 @@ export default function CreateGamePage() {
                         : 'border-gray-300 text-gray-700'
                     }`}
                   >
-                    Siempre esperar al tiempo
+                    Esperar a todos (todos avanzan juntos)
                   </button>
                 </div>
               </div>

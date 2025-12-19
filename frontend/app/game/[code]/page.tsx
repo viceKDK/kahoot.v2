@@ -151,13 +151,13 @@ export default function GamePage() {
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', duration: 0.5 }}
-          className="text-center"
+          className="text-center max-w-md w-full"
         >
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className={`text-9xl mb-6 ${
+            className={`text-8xl sm:text-9xl mb-4 sm:mb-6 ${
               answerFeedback.isCorrect ? 'animate-bounce' : 'animate-pulse'
             }`}
           >
@@ -168,7 +168,7 @@ export default function GamePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className={`text-6xl font-black mb-4 ${
+            className={`text-4xl sm:text-5xl md:text-6xl font-black mb-6 ${
               answerFeedback.isCorrect ? 'text-green-400' : 'text-red-400'
             }`}
           >
@@ -180,9 +180,9 @@ export default function GamePage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5, type: 'spring' }}
-              className="bg-white/90 backdrop-blur-sm rounded-3xl px-12 py-6 shadow-2xl inline-block"
+              className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl px-8 sm:px-12 py-5 sm:py-6 shadow-2xl inline-block"
             >
-              <p className="text-4xl font-black text-primary">
+              <p className="text-3xl sm:text-4xl font-black text-primary">
                 +{answerFeedback.pointsEarned} puntos
               </p>
             </motion.div>
@@ -471,15 +471,15 @@ export default function GamePage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, type: 'spring' }}
-              className="mb-8"
+              className="mb-6 md:mb-8"
             >
-              <h1 className="text-4xl md:text-5xl font-black text-white text-center drop-shadow-lg leading-tight px-4">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white text-center drop-shadow-lg leading-tight px-4">
                 {currentQuestion.text}
               </h1>
             </motion.div>
 
             {/* Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 flex-1 content-start">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-6 flex-1 content-start px-2 md:px-0">
               {currentQuestion.options.map((option, index) => (
                 <motion.div
                   key={option.id}

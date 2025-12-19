@@ -33,7 +33,8 @@ export class GameSocketHandler {
     // Host crea un juego
     socket.on(SocketEvents.HOST_CREATE_GAME, async (payload: CreateGamePayload) => {
       try {
-        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        // HARDCODED - Cambia esta IP a tu IP WiFi
+        const baseUrl = 'http://192.168.1.20:3000';
         const { game, qrCode, joinUrl } = await GameService.createGame(
           payload.quizId,
           payload.hostName,
@@ -361,35 +362,24 @@ export class GameSocketHandler {
         selectedOptionId: lastAnswer.optionId,
       });
 
-      // 2. Después de 2 segundos, mostrar ranking al jugador
+      // 2. En modo FAST: solo mostrar feedback por 2.5 segundos y avanzar directamente
+      // NO mostrar ranking entre preguntas (solo al final del juego)
       setTimeout(() => {
-        const { ranking } = GameService.getRanking(code);
-        const playerRank = ranking.find((e) => e.player.id === playerId);
+        const hasMore = GameService.advancePlayerToNextQuestion(code, playerId);
 
-        this.emitToPlayer(playerId, 'player:show_ranking', {
-          ranking,
-          currentPlayerRank: playerRank?.rank || 0,
-          topPlayers: ranking.slice(0, 5),
-        });
+        if (hasMore) {
+          // Iniciar siguiente pregunta
+          this.startQuestionForPlayer(code, playerId);
+        } else {
+          // Jugador terminó
+          this.showPlayerFinalScreen(code, playerId);
 
-        // 3. Después de 3 segundos, avanzar a la siguiente pregunta para este jugador
-        setTimeout(() => {
-          const hasMore = GameService.advancePlayerToNextQuestion(code, playerId);
-
-          if (hasMore) {
-            // Iniciar siguiente pregunta
-            this.startQuestionForPlayer(code, playerId);
-          } else {
-            // Jugador terminó
-            this.showPlayerFinalScreen(code, playerId);
-
-            // Verificar si todos terminaron para finalizar el juego global
-            if (GameService.haveAllPlayersFinished(code)) {
-              this.finishGame(code);
-            }
+          // Verificar si todos terminaron para finalizar el juego global
+          if (GameService.haveAllPlayersFinished(code)) {
+            this.finishGame(code);
           }
-        }, 3000); // Ranking por 3 segundos
-      }, 2000); // Feedback por 2 segundos
+        }
+      }, 2500); // Feedback por 2.5 segundos y avanzar directamente
     } catch (error) {
       console.error('Error handling fast mode advance:', error);
     }
@@ -458,24 +448,39 @@ export class GameSocketHandler {
         });
       });
 
-      // 2. Despues de 2 segundos, avanzar a todos a la siguiente pregunta (sin ranking intermedio)
+      // 2. En modo WAIT_ALL: Después de 2 segundos, mostrar ranking en vivo
       setTimeout(() => {
-        playersInThisQuestion.forEach((player) => {
-          const hasMore = GameService.advancePlayerToNextQuestion(code, player.id);
+        const { ranking } = GameService.getRanking(code);
 
-          if (hasMore) {
-            // Iniciar siguiente pregunta
-            this.startQuestionForPlayer(code, player.id);
-          } else {
-            // Jugador termino
-            this.showPlayerFinalScreen(code, player.id);
-          }
+        playersInThisQuestion.forEach((player) => {
+          const playerRank = ranking.find((e) => e.player.id === player.id);
+
+          this.emitToPlayer(player.id, 'player:show_ranking', {
+            ranking,
+            currentPlayerRank: playerRank?.rank || 0,
+            topPlayers: ranking.slice(0, 5),
+          });
         });
 
-        // Verificar si todos terminaron
-        if (GameService.haveAllPlayersFinished(code)) {
-          this.finishGame(code);
-        }
+        // 3. Después de 3 segundos de mostrar ranking, avanzar a la siguiente pregunta
+        setTimeout(() => {
+          playersInThisQuestion.forEach((player) => {
+            const hasMore = GameService.advancePlayerToNextQuestion(code, player.id);
+
+            if (hasMore) {
+              // Iniciar siguiente pregunta
+              this.startQuestionForPlayer(code, player.id);
+            } else {
+              // Jugador terminó
+              this.showPlayerFinalScreen(code, player.id);
+            }
+          });
+
+          // Verificar si todos terminaron
+          if (GameService.haveAllPlayersFinished(code)) {
+            this.finishGame(code);
+          }
+        }, 3000); // Ranking por 3 segundos
       }, 2000); // Feedback por 2 segundos
     } catch (error) {
       console.error('Error handling wait-all mode advance:', error);

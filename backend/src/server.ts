@@ -59,6 +59,8 @@ io.on('connection', (socket) => {
 // Start server
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = '0.0.0.0'; // Escuchar en todas las interfaces de red
+// HARDCODED - Cambia esta IP a tu IP WiFi
+const SERVER_IP = '192.168.1.20';
 
 httpServer.listen(PORT, HOST, () => {
   console.log(`
@@ -66,8 +68,7 @@ httpServer.listen(PORT, HOST, () => {
 ║                                        ║
 ║       🎮 QuizArena Server 🎮          ║
 ║                                        ║
-║  Server: http://192.168.1.6:${PORT}     ║
-║  Local:  http://localhost:${PORT}       ║
+║  Server: http://${SERVER_IP}:${PORT}          ║
 ║  Environment: ${process.env.NODE_ENV || 'development'}              ║
 ║                                        ║
 ╚════════════════════════════════════════╝

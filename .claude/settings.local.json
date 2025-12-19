@@ -11,7 +11,11 @@
       "Bash(cat:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(start.bat)",
+      "Bash(cmd.exe /c \"cd /d C:\\Users\\vicen\\OneDrive\\Escritorio\\apps\\por hacer\\kahoot && start.bat\")",
+      "Bash(cmd.exe /c \"ipconfig | findstr IPv4\")",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
