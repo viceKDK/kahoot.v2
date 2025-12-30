@@ -17,6 +17,7 @@ const poolConfig: PoolConfig = {
   max: 20, // Máximo de conexiones en el pool
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
 };
 
 // Singleton Pattern para el pool de conexiones
