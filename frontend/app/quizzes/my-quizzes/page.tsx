@@ -1,6 +1,6 @@
 // ============================================================================
 // MY QUIZZES PAGE
-// Página para gestionar mis quizzes (ver, editar, eliminar, duplicar)
+// Página para gestionar mis quizzes - Restaurada
 // ============================================================================
 
 'use client';
@@ -9,38 +9,33 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Quiz } from '@/shared/types';
 import { UserStorage } from '@/lib/userStorage';
-import { motion } from 'framer-motion';
-
-// HARDCODED - Cambia esta IP a tu IP WiFi
-const BACKEND_URL = 'http://192.168.1.20:3001';
+import { useAuth } from '@/hooks/useAuth';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fetchBackend } from '@/lib/api';
 
 export default function MyQuizzesPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState('');
-  const [showAll, setShowAll] = useState(false); // false = mis quizzes, true = todos los quizzes
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    const name = UserStorage.getUserName();
-    setUserName(name);
     fetchQuizzes();
-  }, [showAll]); // Re-fetch cuando cambia showAll
+  }, [showAll, user]);
 
   const fetchQuizzes = async () => {
     setLoading(true);
     try {
       let endpoint;
       if (showAll) {
-        // Obtener TODOS los quizzes
-        endpoint = `${BACKEND_URL}/api/quizzes`;
+        endpoint = '/api/quizzes';
       } else {
-        // Obtener solo mis quizzes
-        const userId = UserStorage.getUserId();
-        endpoint = `${BACKEND_URL}/api/quizzes/creator/${userId}`;
+        const userId = user ? user.id : UserStorage.getUserId();
+        endpoint = `/api/quizzes/creator/${userId}`;
       }
 
-      const response = await fetch(endpoint);
+      const response = await fetchBackend(endpoint);
       const result = await response.json();
 
       if (result.success) {
@@ -54,87 +49,50 @@ export default function MyQuizzesPage() {
   };
 
   const handleDelete = async (quizId: string) => {
-    if (!confirm('¿Estás seguro de eliminar este quiz? Esta acción no se puede deshacer.')) {
-      return;
-    }
+    if (!confirm('¿Estás seguro de eliminar este quiz?')) return;
 
     try {
-      const response = await fetch(
-        `${BACKEND_URL}/api/quizzes/${quizId}`,
-        { method: 'DELETE' }
-      );
-
+      const response = await fetchBackend(`/api/quizzes/${quizId}`, { method: 'DELETE' });
       const result = await response.json();
-
-      if (result.success) {
-        alert('✅ Quiz eliminado');
-        fetchQuizzes();
-      } else {
-        alert('❌ Error al eliminar: ' + result.error);
-      }
+      if (result.success) fetchQuizzes();
+      else alert('❌ Error: ' + result.error);
     } catch (error) {
       console.error('Error deleting quiz:', error);
-      alert('❌ Error al eliminar el quiz');
     }
   };
 
   const handleDuplicate = async (quiz: Quiz) => {
     try {
-      const userId = UserStorage.getUserId();
-
-      // Fetch full quiz with questions
-      const response = await fetch(
-        `${BACKEND_URL}/api/quizzes/${quiz.id}`
-      );
+      const userId = user ? user.id : UserStorage.getUserId();
+      const response = await fetchBackend(`/api/quizzes/${quiz.id}`);
       const result = await response.json();
-
-      if (!result.success) {
-        alert('❌ Error al cargar el quiz');
-        return;
-      }
+      if (!result.success) return;
 
       const fullQuiz = result.data;
-
-      // Create duplicate
       const duplicateData = {
         title: `${fullQuiz.title} (Copia)`,
         description: fullQuiz.description,
         createdBy: userId,
-        isPublic: false, // Las copias son privadas por defecto
+        isPublic: false,
         questions: fullQuiz.questions,
       };
 
-      const createResponse = await fetch(
-        `${BACKEND_URL}/api/quizzes`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(duplicateData),
-        }
-      );
+      const createResponse = await fetchBackend('/api/quizzes', {
+        method: 'POST',
+        body: JSON.stringify(duplicateData),
+      });
 
-      const createResult = await createResponse.json();
-
-      if (createResult.success) {
-        alert('✅ Quiz duplicado exitosamente!');
+      if ((await createResponse.json()).success) {
+        alert('✅ Duplicado!');
         fetchQuizzes();
-      } else {
-        alert('❌ Error al duplicar: ' + createResult.error);
       }
     } catch (error) {
       console.error('Error duplicating quiz:', error);
-      alert('❌ Error al duplicar el quiz');
     }
   };
 
-  const handleEdit = (quizId: string) => {
-    router.push(`/quizzes/edit/${quizId}`);
-  };
-
-  const handleCreateGame = (quizId: string) => {
-    // Guardar quizId seleccionado y redirigir a create con el quiz pre-seleccionado
-    router.push(`/create?quizId=${quizId}`);
-  };
+  const handleEdit = (quizId: string) => router.push(`/quizzes/edit/${quizId}`);
+  const handleCreateGame = (quizId: string) => router.push(`/create?quizId=${quizId}`);
 
   if (loading) {
     return (
@@ -155,131 +113,63 @@ export default function MyQuizzesPage() {
           >
             ← Volver al Inicio
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 className="text-5xl font-bold text-white mb-2">
-                {showAll ? 'Todos los Quizzes' : 'Mis Quizzes'}
+              <h1 className="text-5xl font-bold text-white mb-2 text-shadow">
+                {showAll ? 'Quizzes Públicos' : 'Mis Quizzes'}
               </h1>
               <p className="text-xl text-white/80">
-                {showAll
-                  ? 'Explora y gestiona todos los quizzes disponibles'
-                  : 'Gestiona tus quizzes creados'}
+                {showAll ? 'Explora la comunidad' : 'Tus creaciones'}
               </p>
             </div>
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="btn-primary px-6 py-3 whitespace-nowrap"
-            >
-              {showAll ? '👤 Ver Mis Quizzes' : '🌍 Ver Todos'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="btn-secondary"
+              >
+                {showAll ? '👤 Mis Quizzes' : '🌍 Ver Todos'}
+              </button>
+              <button
+                onClick={() => router.push('/quizzes/create')}
+                className="btn-primary"
+              >
+                + Crear Nuevo
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <button
-            onClick={() => router.push('/quizzes/create')}
-            className="btn-primary px-6 py-3"
-          >
-            + Crear Nuevo Quiz
-          </button>
-        </motion.div>
-
-        {/* Quizzes List */}
+        {/* Quizzes Grid */}
         {quizzes.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="card-white p-12 text-center"
-          >
-            <div className="text-6xl mb-4">📚</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {showAll
-                ? 'No hay quizzes disponibles'
-                : 'No tienes quizzes todavía'}
-            </h2>
-            <p className="text-gray-600 mb-6">
-              {showAll
-                ? 'Sé el primero en crear un quiz'
-                : 'Crea tu primer quiz para comenzar'}
-            </p>
-            <button
-              onClick={() => router.push('/quizzes/create')}
-              className="btn-primary"
-            >
-              {showAll ? 'Crear Nuevo Quiz' : 'Crear Mi Primer Quiz'}
+          <div className="card-white p-12 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay nada por aquí</h2>
+            <button onClick={() => router.push('/quizzes/create')} className="btn-primary mt-4 bg-primary text-white">
+              Crear Primer Quiz
             </button>
-          </motion.div>
+          </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            {quizzes.map((quiz, index) => (
-              <motion.div
-                key={quiz.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="card-white p-6 space-y-4"
-              >
-                {/* Header */}
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    {quiz.title}
-                  </h3>
-                  {quiz.description && (
-                    <p className="text-gray-600 mt-1">{quiz.description}</p>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-semibold">
-                    {(quiz as any).questions?.length || 0} preguntas
-                  </span>
-                  {quiz.isPublic && (
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
-                      Público
-                    </span>
-                  )}
-                  {!quiz.isPublic && (
-                    <span className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full font-semibold">
-                      Privado
-                    </span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="grid grid-cols-2 gap-2 pt-4 border-t">
-                  <button
-                    onClick={() => handleCreateGame(quiz.id)}
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark font-semibold"
-                  >
-                    🎮 Jugar
-                  </button>
-                  <button
-                    onClick={() => handleEdit(quiz.id)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
-                  >
-                    ✏️ Editar
-                  </button>
-                  <button
-                    onClick={() => handleDuplicate(quiz)}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold"
-                  >
-                    📋 Duplicar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(quiz.id)}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
-                  >
-                    🗑️ Eliminar
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
+              {quizzes.map((quiz, index) => (
+                <motion.div
+                  key={quiz.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="card-white p-6 flex flex-col shadow-xl"
+                >
+                  <div className="flex-1 mb-4">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h3>
+                    <p className="text-gray-600 text-sm line-clamp-2">{quiz.description}</p>
+                  </div>
+                  <div className="flex gap-2 pt-4 border-t border-gray-100">
+                    <button onClick={() => handleCreateGame(quiz.id)} className="flex-1 bg-primary text-white py-2 rounded-xl font-bold">🎮 Jugar</button>
+                    <button onClick={() => handleEdit(quiz.id)} className="bg-blue-500 text-white p-2 rounded-xl">✏️</button>
+                    <button onClick={() => handleDelete(quiz.id)} className="bg-red-500 text-white p-2 rounded-xl">🗑️</button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>

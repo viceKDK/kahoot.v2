@@ -1,6 +1,6 @@
 // ============================================================================
 // JOIN GAME PAGE
-// Página para que un jugador se una a una sala
+// Página para que un jugador se una a una sala - Restaurada
 // ============================================================================
 
 'use client';
@@ -11,19 +11,20 @@ import { useSocket } from '@/hooks/useSocket';
 import { useGameStore } from '@/store/gameStore';
 import { SocketEvents, GameStatus } from '@/shared/types';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function JoinGamePage() {
   const params = useParams();
   const router = useRouter();
   const socket = useSocket();
-  const { game, currentPlayer, isConnected, setCurrentPlayer } = useGameStore();
+  const { user } = useAuth();
+  const { game, currentPlayer, setCurrentPlayer } = useGameStore();
 
   const [playerName, setPlayerName] = useState('');
   const [hasJoined, setHasJoined] = useState(false);
 
   const code = (params.code as string).toUpperCase();
 
-  // Redirect cuando el juego inicia
   useEffect(() => {
     if (game?.status === GameStatus.PLAYING && hasJoined) {
       router.push(`/game/${code}`);
@@ -32,20 +33,9 @@ export default function JoinGamePage() {
 
   const handleJoinGame = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!socket) return;
+    if (!playerName.trim()) return alert('Nombre obligatorio');
 
-    // Solo comprobamos que exista instancia de socket;
-    // si todavía está conectando, Socket.IO enviará el evento al conectar.
-    if (!socket) {
-      alert('No se pudo conectar al servidor. Recarga la página e inténtalo de nuevo.');
-      return;
-    }
-
-    if (!playerName.trim()) {
-      alert('Por favor ingresa tu nombre');
-      return;
-    }
-
-    // Listen for join response
     socket.once(SocketEvents.PLAYER_JOINED, (response) => {
       setCurrentPlayer(response.player);
       setHasJoined(true);
@@ -54,6 +44,7 @@ export default function JoinGamePage() {
     socket.emit(SocketEvents.PLAYER_JOIN_GAME, {
       code,
       playerName: playerName.trim(),
+      supabaseUserId: user?.id,
     });
   };
 
@@ -63,66 +54,19 @@ export default function JoinGamePage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="card-white max-w-2xl w-full p-12"
+          className="card-white max-w-2xl w-full p-12 text-center shadow-2xl"
         >
-          {/* Header */}
-          <div className="text-center mb-8">
-            <motion.h1
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring' }}
-              className="text-6xl font-bold text-primary mb-4"
-            >
-              {currentPlayer?.name}
-            </motion.h1>
-            <h2 className="text-4xl font-bold text-gray-900 mb-3">
-              ¡Estás Dentro!
-            </h2>
-            <p className="text-xl text-gray-600">
-              Esperando que el host inicie el juego...
-            </p>
-          </div>
-
-          {/* Players count */}
-          <div className="mb-6 text-center">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-full">
-              <span className="text-2xl font-bold">{game.players.length}</span>
-              <span className="text-lg">jugador{game.players.length !== 1 ? 'es' : ''} conectado{game.players.length !== 1 ? 's' : ''}</span>
-            </div>
-          </div>
-
-          {/* Players list */}
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-700 mb-3 text-center">Jugadores en la sala:</h3>
-            {game.players.map((player, index) => (
-              <motion.div
-                key={player.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl"
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-xl">
-                  {player.name.charAt(0).toUpperCase()}
+          <h1 className="text-6xl font-bold text-primary mb-4">{currentPlayer?.name}</h1>
+          <h2 className="text-4xl font-bold text-gray-900 mb-2">¡Estás Dentro!</h2>
+          <p className="text-xl text-gray-600">Esperando al host...</p>
+          <div className="mt-8 bg-gray-50 rounded-2xl p-6">
+            <p className="text-gray-500 font-bold mb-4">{game.players.length} jugadores en la sala</p>
+            <div className="grid grid-cols-2 gap-2">
+              {game.players.map(p => (
+                <div key={p.id} className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm font-bold">
+                  {p.name}
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{player.name}</p>
-                </div>
-                {player.id === currentPlayer?.id && (
-                  <span className="text-xs bg-primary text-white px-3 py-1 rounded-full font-semibold">
-                    Tú
-                  </span>
-                )}
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Loading animation */}
-          <div className="mt-8 text-center">
-            <div className="inline-flex items-center gap-2 text-gray-500">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              ))}
             </div>
           </div>
         </motion.div>
@@ -131,54 +75,34 @@ export default function JoinGamePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8">
+    <div className="min-h-screen flex items-center justify-center p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-lg w-full"
       >
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
-            Unirse a Sala
-          </h1>
-          <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-yellow-300 tracking-wider">
-            {code}
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-4">Unirse a Sala</h1>
+          <div className="text-6xl font-black text-yellow-300 tracking-widest">{code}</div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleJoinGame} className="card-white p-6 sm:p-8 space-y-5 sm:space-y-6">
+        <form onSubmit={handleJoinGame} className="card-white p-8 space-y-6 shadow-2xl">
           <div>
-            <label className="block text-base sm:text-lg font-bold mb-2 text-gray-900">
-              Tu Nombre
-            </label>
+            <label className="block text-lg font-bold mb-2">Tu Nombre</label>
             <input
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Ingresa tu nombre"
-              maxLength={20}
-              autoFocus
-              className="w-full px-4 py-3 sm:py-4 text-base sm:text-lg rounded-xl bg-gray-100 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Nickname"
+              className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-900 text-center text-xl font-bold focus:outline-none"
             />
           </div>
-
-          <div className="flex gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => router.push('/')}
-              className="btn-secondary flex-1 py-3 sm:py-4 text-base sm:text-lg"
-            >
-              Cancelar
-            </button>
-            <button type="submit" className="btn-primary flex-1 py-3 sm:py-4 text-base sm:text-lg">
-              Unirse
-            </button>
+          <div className="flex gap-4">
+            <button type="button" onClick={() => router.push('/')} className="flex-1 py-3 bg-gray-200 rounded-xl font-bold">Cancelar</button>
+            <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl font-bold shadow-lg">Unirse</button>
           </div>
         </form>
       </motion.div>
     </div>
   );
 }
-

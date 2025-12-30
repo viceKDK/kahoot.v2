@@ -18,6 +18,7 @@ import {
 } from '../../../shared/types';
 import QuizRepository from '../models/QuizRepository';
 import GameSessionRepository from '../models/GameSessionRepository';
+import PlayerRepository from '../models/PlayerRepository';
 import ScoringService from './ScoringService';
 import { generateGameCode } from '../utils/codeGenerator';
 import QRCode from 'qrcode';
@@ -91,9 +92,10 @@ export class GameService {
    * Un jugador se une al juego
    * @param code - Código del juego
    * @param playerName - Nombre del jugador
+   * @param supabaseUserId - ID opcional de Supabase para persistencia
    * @returns Juego y jugador creado
    */
-  joinGame(code: string, playerName: string): { game: Game; player: Player } {
+  joinGame(code: string, playerName: string, supabaseUserId?: string): { game: Game; player: Player } {
     const game = this.activeGames.get(code);
     if (!game) {
       throw new Error('Game not found');
@@ -124,6 +126,7 @@ export class GameService {
       accuracy: 0,
       isHost: false,
       joinedAt: new Date(),
+      supabaseUserId, // Guardamos el ID si existe
     };
 
     game.players.push(player);
@@ -384,8 +387,35 @@ export class GameService {
       results: game.results[index],
     }));
 
-    // Actualizar en BD
+    // Actualizar en BD metadata de la sesión
     await GameSessionRepository.updateSessionStatus(code, GameStatus.FINISHED);
+
+    // PERSISTENCIA DE STATS: Actualizar estadísticas de jugadores registrados
+    const updateStatsPromises = ranking.map(async (entry) => {
+      const { player, rank } = entry;
+      if (player.supabaseUserId) {
+        try {
+          // Calcular XP ganado: Score / 10 + Bonus por podio
+          const podiumBonus = rank === 1 ? 500 : rank === 2 ? 300 : rank === 3 ? 100 : 0;
+          const xpEarned = Math.floor(player.score / 10) + podiumBonus;
+
+          await PlayerRepository.updatePlayerStats({
+            userId: player.supabaseUserId,
+            isWin: rank === 1,
+            isPodium: rank <= 3,
+            questionsAnswered: player.totalAnswers,
+            correctAnswers: player.correctAnswers,
+            bestStreak: player.streak, // Nota: esto debería ser la racha máxima alcanzada en la partida
+            xpEarned
+          });
+          console.log(`✅ Stats updated for user ${player.supabaseUserId}`);
+        } catch (error) {
+          console.error(`❌ Failed to update stats for user ${player.supabaseUserId}:`, error);
+        }
+      }
+    });
+
+    await Promise.all(updateStatsPromises);
 
     return { finalRanking: ranking, podium, questionHistory };
   }
@@ -570,11 +600,42 @@ export class GameService {
       throw new Error('Option not found');
     }
 
+    // ANTI-CHEAT: Validar el tiempo transcurrido
+    // El backend tiene la autoridad sobre cuándo empezó la pregunta
+    let validatedTimeElapsed = timeElapsed;
+    if (playerState.questionStartTime) {
+      const serverTimeElapsed = Date.now() - playerState.questionStartTime;
+      
+      // Permitimos un margen de error (latencia) de 2000ms a favor del cliente
+      // Si el cliente dice que tardó 1s pero el servidor dice 5s -> OK (pudo ser lag de red al recibir la pregunta)
+      // Si el cliente dice que tardó 0.1s pero el servidor dice 0.05s -> IMPOSIBLE (cheat)
+      // Si el cliente dice que tardó 10s pero el servidor dice 2s -> IMPOSIBLE (cheat o reloj desincronizado)
+      
+      // Regla 1: No puede ser negativo
+      if (validatedTimeElapsed < 0) validatedTimeElapsed = 0;
+
+      // Regla 2: No puede ser mayor al tiempo límite (+ un buffer de latencia de 3s)
+      const maxAllowed = currentQuestion.timeLimit + 3000;
+      if (validatedTimeElapsed > maxAllowed) validatedTimeElapsed = maxAllowed;
+
+      // Regla 3 (La más importante): Si el servidor dice que apenas pasaron 100ms
+      // y el cliente dice que pasaron 5000ms (raro) o viceversa, ajustamos.
+      // Pero lo crítico es que no diga "tardé 0" si no ha pasado tiempo.
+      // Simplemente usaremos Math.max para asegurar que al menos haya pasado lo que dice el servidor menos latencia.
+      // O mejor aún: Usamos el tiempo del servidor como referencia principal si hay discrepancia grande.
+      
+      // Estrategia simple: Si la diferencia es > 2 segundos, usamos el tiempo del servidor
+      if (Math.abs(serverTimeElapsed - validatedTimeElapsed) > 2000) {
+        console.warn(`⚠️ Time discrepancy detected for player ${playerId}: Client=${validatedTimeElapsed}, Server=${serverTimeElapsed}. Using Server time.`);
+        validatedTimeElapsed = serverTimeElapsed;
+      }
+    }
+
     const isCorrect = selectedOption.isCorrect;
     const pointsEarned = isCorrect
       ? ScoringService.calculatePoints(
           currentQuestion.timeLimit,
-          timeElapsed,
+          validatedTimeElapsed,
           player.streak
         )
       : 0;

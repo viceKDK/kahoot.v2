@@ -1,28 +1,45 @@
 // ============================================================================
 // API UTILITIES
-// Funciones auxiliares para llamadas al backend
+// Funciones auxiliares para llamadas al backend con soporte de Auth
 // ============================================================================
 
+import { supabase } from './supabase';
+
 /**
- * Obtiene la URL del backend dinámicamente basándose en el hostname actual
- * Esto permite que la app funcione tanto en localhost como en red local
+ * Obtiene la URL del backend dinámicamente o desde variables de entorno
  */
 export const getBackendURL = (): string => {
-  // Si estamos en el servidor (SSR), usar la variable de entorno
   if (typeof window === 'undefined') {
     return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
   }
-
-  // En el cliente, construir la URL basándose en el hostname actual
-  const hostname = window.location.hostname;
-  const protocol = window.location.protocol;
-  return `${protocol}//${hostname}:3001`;
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 };
 
 /**
- * Helper para hacer fetch al backend con la URL correcta
+ * Helper para hacer fetch al backend inyectando el Token de Supabase
  */
-export const fetchBackend = (path: string, options?: RequestInit) => {
+export const fetchBackend = async (path: string, options: RequestInit = {}) => {
   const url = `${getBackendURL()}${path}`;
-  return fetch(url, options);
+  
+  // Obtener sesión actual de Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  // Preparar headers
+  const headers = new Headers(options.headers || {});
+  
+  // Si hay token, lo agregamos
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  // Asegurar Content-Type JSON si enviamos body
+  if (options.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
 };

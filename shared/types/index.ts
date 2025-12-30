@@ -41,6 +41,7 @@ export interface Player {
   accuracy: number; // 0-100
   isHost: boolean;
   joinedAt: Date;
+  supabaseUserId?: string; // ID de Supabase para guardar stats persistentes
 }
 
 // Estado de juego individual por jugador
@@ -179,6 +180,7 @@ export interface CreateGameResponse {
 export interface JoinGamePayload {
   code: string;
   playerName: string;
+  supabaseUserId?: string;
 }
 
 export interface JoinGameResponse {

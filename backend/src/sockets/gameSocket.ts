@@ -33,8 +33,10 @@ export class GameSocketHandler {
     // Host crea un juego
     socket.on(SocketEvents.HOST_CREATE_GAME, async (payload: CreateGamePayload) => {
       try {
-        // HARDCODED - Cambia esta IP a tu IP WiFi
-        const baseUrl = 'http://192.168.1.20:3000';
+        // Usar SERVER_IP del entorno o localhost
+        const hostIp = process.env.SERVER_IP || 'localhost';
+        const baseUrl = `http://${hostIp}:3000`;
+        
         const { game, qrCode, joinUrl } = await GameService.createGame(
           payload.quizId,
           payload.hostName,
@@ -61,7 +63,11 @@ export class GameSocketHandler {
     // Jugador se une a un juego
     socket.on(SocketEvents.PLAYER_JOIN_GAME, (payload: JoinGamePayload) => {
       try {
-        const { game, player } = GameService.joinGame(payload.code, payload.playerName);
+        const { game, player } = GameService.joinGame(
+          payload.code, 
+          payload.playerName,
+          payload.supabaseUserId
+        );
 
         // El jugador se une a la room del juego
         socket.join(game.code);
@@ -75,7 +81,7 @@ export class GameSocketHandler {
         // Notificar a todos los clientes que el juego se actualizó
         this.io.emit(SocketEvents.GAME_UPDATED, game);
 
-        console.log(`Player ${player.name} joined game ${game.code} (socketId: ${socket.id})`);
+        console.log(`Player ${player.name} joined game ${game.code} (socketId: ${socket.id}, supabaseId: ${payload.supabaseUserId})`);
       } catch (error: any) {
         const errorPayload: ErrorPayload = {
           message: error.message || 'Failed to join game',
@@ -125,6 +131,16 @@ export class GameSocketHandler {
     // Jugador envía respuesta (NUEVA LÓGICA CON ESTADO POR JUGADOR)
     socket.on(SocketEvents.PLAYER_SUBMIT_ANSWER, (payload: SubmitAnswerPayload) => {
       try {
+        // SECURITY: Rate Limiting de Socket (Anti-Spam)
+        // Evitar que un bot envíe 100 respuestas por segundo
+        const lastAction = (socket as any).lastAnswerTime || 0;
+        const now = Date.now();
+        if (now - lastAction < 500) { // Mínimo 500ms entre respuestas
+          console.warn(`⚠️ Spam detected from player ${payload.playerId}. Ignoring.`);
+          return;
+        }
+        (socket as any).lastAnswerTime = now;
+
         console.log(`📥 Answer received from player ${payload.playerId} in game ${payload.gameId}`);
 
         const game = GameService.getGame(payload.gameId);

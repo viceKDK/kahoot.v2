@@ -4,7 +4,7 @@ title QuizArena - Iniciando...
 :: ============================================================================
 :: CONFIGURACION - CAMBIA AQUI TU IP
 :: ============================================================================
-set LOCAL_IP=192.168.1.20
+set LOCAL_IP=192.168.1.52
 
 echo ============================================================================
 echo                      QuizArena - Script de Inicio
@@ -28,18 +28,20 @@ echo.
 :: Configurar .env.local
 echo [*] Configurando frontend...
 echo NEXT_PUBLIC_BACKEND_URL=http://%LOCAL_IP%:3001> frontend\.env.local
-echo [OK] Frontend configurado con: http://%LOCAL_IP%:3001
+echo NEXT_PUBLIC_SUPABASE_URL=https://flewttsbdvoqxmmqoldv.supabase.co>> frontend\.env.local
+echo NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_AQL_ZAjtUvjD2BD6iIPueQ_o4r1C897>> frontend\.env.local
+echo [OK] Frontend configurado con Supabase y Backend: http://%LOCAL_IP%:3001
 echo.
 
 :: Iniciar Backend
 echo [*] Iniciando Backend...
-start "Backend - http://%LOCAL_IP%:3001" cmd /k "cd backend && set SERVER_IP=%LOCAL_IP% && npm run dev"
+start "BACKEND - %LOCAL_IP%:3001" cmd /k "echo ======================================== && echo BACKEND CORRIENDO EN: http://%LOCAL_IP%:3001 && echo ======================================== && cd backend && set SERVER_IP=%LOCAL_IP% && npm run dev"
 
 timeout /t 2 /nobreak >nul
 
 :: Iniciar Frontend
 echo [*] Iniciando Frontend...
-start "Frontend - http://%LOCAL_IP%:3000" cmd /k "cd frontend && npm run dev"
+start "FRONTEND - %LOCAL_IP%:3000" cmd /k "echo ======================================== && echo FRONTEND CORRIENDO EN: http://%LOCAL_IP%:3000 && echo ======================================== && cd frontend && npm run dev"
 
 echo.
 echo ============================================================================

@@ -1,6 +1,6 @@
 // ============================================================================
 // HOME PAGE
-// Página principal - Crear sala o unirse
+// Página principal - Restaurada al diseño original violeta
 // ============================================================================
 
 'use client';
@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
+import AuthButton from '@/components/AuthButton';
 
 export default function HomePage() {
   const router = useRouter();
@@ -24,6 +25,11 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-8">
+      {/* Botón de Auth discreto en la esquina superior derecha */}
+      <div className="fixed top-4 right-4 z-50">
+        <AuthButton />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -46,12 +52,36 @@ export default function HomePage() {
 
         {/* Cards */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Crear Sala */}
+          {/* Unirse a Sala */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
             className="card-white p-8 space-y-4"
+          >
+            <div className="text-6xl text-center">🚀</div>
+            <h2 className="text-2xl font-bold text-center">Unirse a Sala</h2>
+            <form onSubmit={handleJoinGame} className="space-y-4">
+              <input
+                type="text"
+                placeholder="CÓDIGO"
+                value={gameCode}
+                onChange={(e) => setGameCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-900 text-center text-2xl font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <button type="submit" className="btn-primary w-full bg-primary text-white hover:bg-primary-dark">
+                Unirse
+              </button>
+            </form>
+          </motion.div>
+
+          {/* Crear Sala */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="card-white p-8 space-y-4 flex flex-col justify-between"
           >
             <div className="text-6xl text-center">🎯</div>
             <h2 className="text-2xl font-bold text-center">Crear Sala</h2>
@@ -61,36 +91,12 @@ export default function HomePage() {
             <button
               onClick={() => {
                 reset();
-                router.push('/create');
+                router.push('/quizzes/my-quizzes');
               }}
-              className="btn-primary w-full"
+              className="btn-primary w-full bg-primary text-white hover:bg-primary-dark"
             >
               Crear Nueva Sala
             </button>
-          </motion.div>
-
-          {/* Unirse a Sala */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="card-white p-8 space-y-4"
-          >
-            <div className="text-6xl text-center">🚀</div>
-            <h2 className="text-2xl font-bold text-center">Unirse a Sala</h2>
-            <form onSubmit={handleJoinGame} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Ingresa el código"
-                value={gameCode}
-                onChange={(e) => setGameCode(e.target.value.toUpperCase())}
-                maxLength={6}
-                className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-900 text-center text-2xl font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <button type="submit" className="btn-primary w-full">
-                Unirse
-              </button>
-            </form>
           </motion.div>
         </div>
 
@@ -102,40 +108,26 @@ export default function HomePage() {
           className="grid md:grid-cols-2 gap-6"
         >
           {/* Crear Quiz */}
-          <div className="card p-6 space-y-3 text-center">
+          <div 
+            className="card p-6 space-y-3 text-center cursor-pointer hover:bg-white/20 transition-colors"
+            onClick={() => router.push('/quizzes/create')}
+          >
             <div className="text-4xl">📝</div>
             <h3 className="text-xl font-bold">Crear Quiz</h3>
-            <button
-              onClick={() => router.push('/quizzes/create')}
-              className="btn-secondary w-full"
-            >
-              Nuevo Quiz
-            </button>
+            <p className="text-white/60 text-sm">Diseña tus preguntas</p>
           </div>
 
           {/* Mis Quizzes */}
-          <div className="card p-6 space-y-3 text-center">
+          <div 
+            className="card p-6 space-y-3 text-center cursor-pointer hover:bg-white/20 transition-colors"
+            onClick={() => router.push('/quizzes/my-quizzes')}
+          >
             <div className="text-4xl">📚</div>
             <h3 className="text-xl font-bold">Mis Quizzes</h3>
-            <button
-              onClick={() => router.push('/quizzes/my-quizzes')}
-              className="btn-secondary w-full"
-            >
-              Ver Mis Quizzes
-            </button>
+            <p className="text-white/60 text-sm">Ver tu colección</p>
           </div>
-        </motion.div>
-
-        {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-white/60 text-sm"
-        >
         </motion.div>
       </motion.div>
     </div>
   );
 }
-
