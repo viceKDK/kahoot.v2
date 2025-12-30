@@ -404,12 +404,9 @@ npm test
 
 ### 🔮 Futuro
 
-- [ ] Modo oscuro/claro
 - [ ] Categorías y tags para quizzes
 - [ ] Búsqueda de quizzes públicos
-- [ ] Salas privadas con contraseña
 - [ ] Modo equipo (Team Battle)
-- [ ] Integración con Twitch/YouTube Chat
 - [ ] PWA para instalación en móvil
 - [ ] Soporte multiidioma
 - [ ] Upload de imágenes (actualmente solo URL)
